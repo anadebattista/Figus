@@ -304,14 +304,13 @@ const CONFIG = {
   // 1. Tu Client ID de Google Cloud Console
   CLIENT_ID: '21128263078-9jijik6t9g63dcoo2evgbtd6qgunm1gh.apps.googleusercontent.com',
 
-
-  // 2. El ID de tu Google Sheet (está en la URL: docs.google.com/spreadsheets/d/ESTE_ID/edit)
+  // 2. El ID de tu Google Sheet
   SHEET_ID: '1Awyslbx9VJzkbUTKWawj6A2hyCvoR6G2KWilj0djD4o',
 
-  // 3. Nombres de los 4 integrantes de la familia
-  FAMILY_MEMBERS: ['anadebattista@gmail.com', 'Facu', 'Alfon', 'Emi'],
+  // 3. Los 4 integrantes de la familia (con sus emails)
+  FAMILY_MEMBERS: ['anadebattista@gmail.com', 'lonfacu@gmail.com', 'alfonsinalonardi@gmail.com', 'emilialonardi@gmail.com'],
 
-  // 4. Total de figuritas del álbum FIFA 2026
+  // 4. Total de figuritas (se actualiza automáticamente al cargar el catálogo)
   TOTAL_STICKERS: 682,
 };
 </script>
@@ -376,7 +375,10 @@ const CONFIG = {
       </div>
 
       <div class="controls">
-        <input class="search-box" id="search-input" type="text" placeholder="Buscar por número..." oninput="renderGrid()">
+        <input class="search-box" id="search-input" type="text" placeholder="Buscar por número o descripción..." oninput="renderGrid()">
+        <select class="filter-select" id="filter-team" onchange="renderGrid()">
+          <option value="all">Todos los equipos</option>
+        </select>
         <select class="filter-select" id="filter-status" onchange="renderGrid()">
           <option value="all">Todos los estados</option>
           <option value="missing">Faltan</option>
@@ -479,18 +481,25 @@ const CONFIG = {
         <div class="setup-step">
           <div class="step-num">1</div>
           <div class="step-content">
-            <h4>Crear el Google Sheet</h4>
-            <p>Creá una planilla nueva en Google Drive. Necesita 3 hojas con estos nombres exactos:<br>
-            <code>Stickers</code> · <code>Intercambios</code> · <code>Config</code><br><br>
-            En la hoja <code>Stickers</code>, la fila 1 debe tener estos encabezados:<br>
-            <code>numero | usuario | estado | cantidad_rep</code></p>
+            <h4>Usar el Google Sheet de figuritas</h4>
+            <p>Creá o usá una planilla en Google Drive con 3 hojas: <br>
+            <code>Stickers</code> · <code>UserData</code> · <code>Intercambios</code><br><br>
+            <strong>Stickers</strong> (catálogo — solo lectura):<br>
+            Encabezados: <code>numero | descripcion | seleccion | categoria | info</code><br>
+            Ejemplo: <code>1 | Escudo Argentina | Argentina | escudo | -</code><br><br>
+            <strong>UserData</strong> (estado por usuario):<br>
+            Encabezados: <code>numero | usuario | estado | cantidad_rep</code><br>
+            Estados: <code>missing | owned | repeated</code><br><br>
+            <strong>Intercambios</strong> (historial):<br>
+            Encabezados: <code>fecha | de | para | da | recibe | notas</code></p>
           </div>
         </div>
         <div class="setup-step">
           <div class="step-num">2</div>
           <div class="step-content">
-            <h4>Compartir el Sheet</h4>
-            <p>Compartí la planilla con los 4 integrantes de la familia (Editor). El ID del Sheet está en la URL de la planilla — copialo y pegalo en <code>CONFIG.SHEET_ID</code>.</p>
+            <h4>Obtener el Sheet ID</h4>
+            <p>El ID está en la URL de tu planilla: <code>docs.google.com/spreadsheets/d/<strong>ESTE_ID</strong>/edit</code><br>
+            Copialo y pegalo en <code>CONFIG.SHEET_ID</code> en el archivo <code>index.html</code>.</p>
           </div>
         </div>
         <div class="setup-step">
@@ -499,27 +508,35 @@ const CONFIG = {
             <h4>Crear proyecto en Google Cloud</h4>
             <p>Entrá a <strong>console.cloud.google.com</strong> → Nuevo proyecto → Habilitar APIs:<br>
             <code>Google Sheets API</code> y <code>Google Drive API</code><br><br>
-            Luego: APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID<br>
+            APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID<br>
             Tipo: <strong>Web application</strong><br>
-            Authorized JavaScript origins: <code>http://localhost</code> (dev) y tu dominio de GitHub Pages<br><br>
-            Copiá el Client ID y pegalo en <code>CONFIG.CLIENT_ID</code>.</p>
+            Authorized JavaScript origins: <code>http://localhost</code> (dev) y tu URL de GitHub Pages<br><br>
+            Copiá el <strong>Client ID</strong> y pegalo en <code>CONFIG.CLIENT_ID</code>.</p>
           </div>
         </div>
         <div class="setup-step">
           <div class="step-num">4</div>
           <div class="step-content">
-            <h4>Deploy en GitHub Pages</h4>
-            <p>Subí el archivo <code>index.html</code> a un repositorio de GitHub.<br>
-            Settings → Pages → Branch: main → carpeta: / (root)<br>
-            La URL será: <code>https://tuusuario.github.io/tu-repo/</code><br><br>
-            Agregá esa URL a los Authorized origins en Google Cloud.</p>
+            <h4>Compartir el Google Sheet</h4>
+            <p>Compartí la planilla con los 4 integrantes de la familia con rol <strong>Editor</strong>.<br>
+            Solo pueden editar quienes tengan acceso al Sheet.</p>
           </div>
         </div>
         <div class="setup-step">
           <div class="step-num">5</div>
           <div class="step-content">
+            <h4>Deploy en GitHub Pages</h4>
+            <p>Subí el archivo <code>index.html</code> a un repo de GitHub.<br>
+            Settings → Pages → Branch: main → carpeta: / (root)<br>
+            La URL será: <code>https://tuusuario.github.io/tu-repo/</code><br><br>
+            Agregá esa URL a los Authorized origins en Google Cloud Console.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">6</div>
+          <div class="step-content">
             <h4>Invitar a la familia</h4>
-            <p>Compartí la URL de GitHub Pages con los 4 integrantes. Cada uno inicia sesión con su cuenta Google y puede editar. Solo pueden usar la app quienes tengan acceso al Sheet.</p>
+            <p>Compartí la URL de GitHub Pages con los 4 integrantes. Cada uno inicia sesión con su cuenta Google y puede ver/editar el álbum.</p>
           </div>
         </div>
       </div>
@@ -565,6 +582,7 @@ let currentUser = null;
 let selectedFeriaUser = null;
 let currentModalSticker = null;
 let allData = {}; // { "user|num": {usuario, numero, estado, cantidad_rep} }
+let catalogoData = {}; // { numero: {numero, descripcion, seleccion, categoria} }
 let tradesData = [];
 let saving = false;
 
@@ -680,12 +698,37 @@ async function loadData() {
   setSyncing(true);
   try {
     await fetchUserInfo();
-    // Load stickers
-    const resp = await sheetsGet('Stickers!A:D');
+    
+    // Load catalog from Stickers sheet
+    // Columns: code, country, country_code, number, description, type, category, is_official, created_at
+    const catResp = await sheetsGet('Stickers!A:I');
+    catalogoData = {};
+    const catRows = catResp.values || [];
+    catRows.slice(1).forEach(row => {
+      if (!row[3]) return; // number is at index 3
+      const num = parseInt(row[3]);
+      catalogoData[num] = {
+        numero: num,
+        code: row[0] || '',
+        seleccion: row[1] || 'FIFA',
+        country_code: row[2] || '',
+        descripcion: row[4] || `Figurita #${num}`,
+        type: row[5] || '',
+        categoria: row[6] || 'jugador',
+        is_official: row[7] || 'Yes',
+        created_at: row[8] || ''
+      };
+    });
+    if (Object.keys(catalogoData).length > 0) {
+      CONFIG.TOTAL_STICKERS = Math.max(...Object.keys(catalogoData).map(Number));
+    }
+
+    // Load user state data from UserData sheet
+    const resp = await sheetsGet('UserData!A:D');
     allData = {};
     const rows = resp.values || [];
     rows.slice(1).forEach(row => {
-      if (!row[0]) return;
+      if (!row[0] || !row[1]) return;
       const num = parseInt(row[0]);
       const user = row[1] || '';
       const estado = row[2] || 'missing';
@@ -707,6 +750,7 @@ async function loadData() {
     })).filter(t => t.de);
 
     updateStats();
+    populateTeamFilters();
     renderGrid();
     renderRepetidas();
     renderMatches();
@@ -716,6 +760,7 @@ async function loadData() {
     updateConfigStatus();
   } catch(e) {
     console.error(e);
+    document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">❌ Error al cargar datos: ${e.message}</div>`;
   }
   setSyncing(false);
 }
@@ -741,10 +786,10 @@ function getFamilyStatus(num) {
 // STATS
 // ============================================================
 function updateStats() {
-  const totalUnique = CONFIG.TOTAL_STICKERS;
+  const totalUnique = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
   let owned = 0, rep = 0, miss = 0;
-  for (let n = 1; n <= totalUnique; n++) {
-    const s = getFamilyStatus(n);
+  for (const num in catalogoData) {
+    const s = getFamilyStatus(parseInt(num));
     if (s === 'owned') owned++;
     else if (s === 'repeated') { owned++; rep++; }
     else miss++;
@@ -752,7 +797,7 @@ function updateStats() {
   document.getElementById('s-owned').textContent = owned;
   document.getElementById('s-rep').textContent = rep;
   document.getElementById('s-miss').textContent = miss;
-  const pct = Math.round(owned / totalUnique * 100);
+  const pct = totalUnique > 0 ? Math.round(owned / totalUnique * 100) : 0;
   document.getElementById('s-pct').textContent = pct + '%';
   document.getElementById('prog-label').textContent = `${owned} / ${totalUnique}`;
   document.getElementById('prog-bar').style.width = pct + '%';
@@ -761,33 +806,52 @@ function updateStats() {
 // ============================================================
 // GRID RENDER
 // ============================================================
+function populateTeamFilters() {
+  const teams = [...new Set(Object.values(catalogoData).map(d => d.seleccion || d.country).filter(x => x))].sort();
+  const sel = document.getElementById('filter-team');
+  sel.innerHTML = '<option value="all">Todos los equipos</option>';
+  teams.forEach(t => { sel.innerHTML += `<option value="${t}">${t}</option>`; });
+}
+
 function renderGrid() {
   const search = document.getElementById('search-input').value.trim();
   const filterStatus = document.getElementById('filter-status').value;
   const filterUser = document.getElementById('filter-user').value;
+  const filterTeam = document.getElementById('filter-team').value;
   const grid = document.getElementById('sticker-grid');
   grid.innerHTML = '';
-  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
-    if (search && !String(n).includes(search)) continue;
+  
+  for (const numStr in catalogoData) {
+    const num = parseInt(numStr);
+    const catalogo = catalogoData[num];
+    const teamName = catalogo.seleccion || catalogo.country || 'FIFA';
+    
+    // Apply search filter
+    if (search && !String(num).includes(search) && !catalogo.descripcion.toLowerCase().includes(search.toLowerCase())) continue;
+    
+    // Apply team filter
+    if (filterTeam !== 'all' && teamName !== filterTeam) continue;
+    
     let estado, qty = 0;
     if (filterUser === 'all') {
-      estado = getFamilyStatus(n);
+      estado = getFamilyStatus(num);
       // Count total repeated
       CONFIG.FAMILY_MEMBERS.forEach(m => {
-        const s = getUserStatus(m, n);
+        const s = getUserStatus(m, num);
         if (s.estado === 'repeated') qty += Math.max(1, s.cantidad_rep);
       });
     } else {
-      const s = getUserStatus(filterUser, n);
+      const s = getUserStatus(filterUser, num);
       estado = s.estado;
       qty = s.cantidad_rep;
     }
     if (filterStatus !== 'all' && estado !== filterStatus) continue;
+    
     const cell = document.createElement('div');
     cell.className = `sticker-cell ${estado}`;
-    cell.innerHTML = `<span class="num">${n}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
-    cell.title = `Figurita #${n}`;
-    cell.onclick = () => openModal(n, filterUser === 'all' ? currentUser : filterUser);
+    cell.title = `#${num} — ${catalogo.descripcion} (${teamName})`;
+    cell.innerHTML = `<span class="num">${num}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
+    cell.onclick = () => openModal(num, filterUser === 'all' ? currentUser : filterUser);
     grid.appendChild(cell);
   }
 }
@@ -797,8 +861,12 @@ function renderGrid() {
 // ============================================================
 function openModal(num, user) {
   currentModalSticker = { num, user };
-  document.getElementById('modal-title').textContent = `Figurita #${num}`;
-  document.getElementById('modal-sub').textContent = `Usuario: ${user}`;
+  const catalogo = catalogoData[num] || {};
+  const displayName = catalogo.descripcion || `Figurita #${num}`;
+  const displayCountry = catalogo.seleccion || catalogo.country || 'FIFA';
+  const displayType = catalogo.type ? `${catalogo.type} • ` : '';
+  document.getElementById('modal-title').textContent = `#${num} — ${displayName}`;
+  document.getElementById('modal-sub').textContent = `${displayCountry} • ${displayType}${catalogo.categoria || 'jugador'} · Usuario: ${user}`;
   const current = getUserStatus(user, num);
   ['missing','owned','repeated'].forEach(s => {
     document.getElementById(`btn-${s}`).classList.toggle('active-state', current.estado === s);
@@ -826,18 +894,18 @@ async function setStatus(status) {
   saving = true;
   setSyncing(true);
   try {
-    // Find existing row
-    const resp = await sheetsGet('Stickers!A:D');
+    // Find existing row in UserData sheet
+    const resp = await sheetsGet('UserData!A:D');
     const rows = resp.values || [];
     let rowIdx = -1;
     rows.forEach((r, i) => { if (parseInt(r[0]) === num && r[1] === user) rowIdx = i; });
     if (rowIdx >= 0) {
-      // Update
-      const range = `Stickers!A${rowIdx+1}:D${rowIdx+1}`;
+      // Update existing row
+      const range = `UserData!A${rowIdx+1}:D${rowIdx+1}`;
       await sheetsBatchUpdate([{ range, values: [[num, user, status, qty]] }]);
     } else {
-      // Append
-      await sheetsAppend('Stickers!A:D', [[num, user, status, qty]]);
+      // Append new row
+      await sheetsAppend('UserData!A:D', [[num, user, status, qty]]);
     }
     updateStats();
     renderGrid();
@@ -857,18 +925,18 @@ function renderRepetidas() {
   const tbody = document.getElementById('rep-table-body');
   tbody.innerHTML = '';
   const entries = Object.values(allData).filter(d => d.estado === 'repeated');
-  if (filterUser !== 'all') entries.filter(d => d.usuario === filterUser);
   const filtered = filterUser === 'all' ? entries : entries.filter(d => d.usuario === filterUser);
   filtered.sort((a,b) => a.numero - b.numero).forEach(d => {
+    const userDisplay = d.usuario.split('@')[0];
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>#${d.numero}</strong></td><td>${d.usuario}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
+    tr.innerHTML = `<td><strong>#${d.numero}</strong></td><td>${userDisplay}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
     tbody.appendChild(tr);
   });
   // WhatsApp message
   if (filtered.length > 0) {
-    const user = filterUser === 'all' ? 'la familia' : filterUser;
+    const userDisplay = filterUser === 'all' ? 'la familia' : filterUser.split('@')[0];
     const nums = filtered.map(d => `#${d.numero}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
-    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${user}*\n\n${nums}\n\n¿Alguien las necesita? 🔁`;
+    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${userDisplay}*\n\n${nums}\n\n¿Alguien las necesita? 🔁`;
     document.getElementById('wa-rep-msg').textContent = msg;
     document.getElementById('whatsapp-rep').style.display = 'block';
   }
@@ -888,7 +956,8 @@ function renderMatches() {
       const userA = CONFIG.FAMILY_MEMBERS[i];
       const userB = CONFIG.FAMILY_MEMBERS[j];
       const canGive = [];
-      for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+      for (const num in catalogoData) {
+        const n = parseInt(num);
         const a = getUserStatus(userA, n);
         const b = getUserStatus(userB, n);
         if (a.estado === 'repeated' && b.estado === 'missing') canGive.push(n);
@@ -971,7 +1040,8 @@ function renderTrades() {
 function renderFeria() {
   const user = selectedFeriaUser || CONFIG.FAMILY_MEMBERS[0];
   const missing = [], repeated = [];
-  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+  for (const num in catalogoData) {
+    const n = parseInt(num);
     const s = getUserStatus(user, n);
     if (s.estado === 'missing') missing.push(n);
     else if (s.estado === 'repeated') repeated.push(n);
@@ -1008,21 +1078,24 @@ function setFeriaUser(user) {
 function renderMemberStats() {
   const container = document.getElementById('member-stats');
   container.innerHTML = '';
+  const totalStickers = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
   CONFIG.FAMILY_MEMBERS.forEach(user => {
     let owned = 0, rep = 0, miss = 0;
-    for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+    for (const num in catalogoData) {
+      const n = parseInt(num);
       const s = getUserStatus(user, n);
       if (s.estado === 'owned') owned++;
       else if (s.estado === 'repeated') { owned++; rep++; }
       else miss++;
     }
-    const pct = Math.round(owned / CONFIG.TOTAL_STICKERS * 100);
+    const pct = totalStickers > 0 ? Math.round(owned / totalStickers * 100) : 0;
+    const userDisplay = user.split('@')[0];
     const div = document.createElement('div');
     div.className = 'progress-section';
     div.innerHTML = `
       <div class="progress-title">
-        <span>👤 ${user}</span>
-        <span style="color:var(--accent2)">${owned} / ${CONFIG.TOTAL_STICKERS}</span>
+        <span>👤 ${userDisplay}</span>
+        <span style="color:var(--accent2)">${owned} / ${totalStickers}</span>
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="progress-sub">${pct}% completado · ${rep} repetidas · ${miss} faltantes</div>
@@ -1033,17 +1106,19 @@ function renderMemberStats() {
   // Full stats
   const fs = document.getElementById('full-stats');
   let totalOwned = 0, totalRep = 0;
-  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+  const totalSticks = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
+  for (const num in catalogoData) {
+    const n = parseInt(num);
     const s = getFamilyStatus(n);
     if (s === 'owned' || s === 'repeated') totalOwned++;
     if (s === 'repeated') totalRep++;
   }
   fs.innerHTML = `
     <div class="stat-card green"><div class="stat-num">${totalOwned}</div><div class="stat-label">Pegadas (familia)</div></div>
-    <div class="stat-card red"><div class="stat-num">${CONFIG.TOTAL_STICKERS - totalOwned}</div><div class="stat-label">Faltan</div></div>
+    <div class="stat-card red"><div class="stat-num">${totalSticks - totalOwned}</div><div class="stat-label">Faltan</div></div>
     <div class="stat-card yellow"><div class="stat-num">${Object.values(allData).filter(d=>d.estado==='repeated').length}</div><div class="stat-label">Repetidas totales</div></div>
     <div class="stat-card purple"><div class="stat-num">${tradesData.length}</div><div class="stat-label">Intercambios</div></div>
-    <div class="stat-card blue"><div class="stat-num">${Math.round(totalOwned/CONFIG.TOTAL_STICKERS*100)}%</div><div class="stat-label">Completado</div></div>
+    <div class="stat-card blue"><div class="stat-num">${totalSticks > 0 ? Math.round(totalOwned/totalSticks*100) : 0}%</div><div class="stat-label">Completado</div></div>
   `;
 }
 
@@ -1074,20 +1149,21 @@ function populateUserSelects() {
   // Filter user in album
   const fu = document.getElementById('filter-user');
   fu.innerHTML = '<option value="all">Familia completa</option>';
-  CONFIG.FAMILY_MEMBERS.forEach(m => { fu.innerHTML += `<option value="${m}">${m}</option>`; });
+  CONFIG.FAMILY_MEMBERS.forEach(m => { fu.innerHTML += `<option value="${m}">${m.split('@')[0]}</option>`; });
 
   // Repetidas filter
   const ru = document.getElementById('rep-user-filter');
   ru.innerHTML = '<option value="all">Todos los usuarios</option>';
-  CONFIG.FAMILY_MEMBERS.forEach(m => { ru.innerHTML += `<option value="${m}">${m}</option>`; });
+  CONFIG.FAMILY_MEMBERS.forEach(m => { ru.innerHTML += `<option value="${m}">${m.split('@')[0]}</option>`; });
 
   // Trade selects
   const tf = document.getElementById('trade-from');
   const tt = document.getElementById('trade-to');
   tf.innerHTML = tt.innerHTML = '';
   CONFIG.FAMILY_MEMBERS.forEach(m => {
-    tf.innerHTML += `<option value="${m}">${m}</option>`;
-    tt.innerHTML += `<option value="${m}">${m}</option>`;
+    const displayName = m.split('@')[0];
+    tf.innerHTML += `<option value="${m}">${displayName}</option>`;
+    tt.innerHTML += `<option value="${m}">${displayName}</option>`;
   });
   if (CONFIG.FAMILY_MEMBERS.length > 1) tt.selectedIndex = 1;
 
@@ -1097,7 +1173,7 @@ function populateUserSelects() {
   CONFIG.FAMILY_MEMBERS.forEach((m, i) => {
     const btn = document.createElement('button');
     btn.className = 'user-pill' + (i === 0 ? ' active' : '');
-    btn.textContent = m;
+    btn.textContent = m.split('@')[0];
     btn.onclick = () => setFeriaUser(m);
     fs.appendChild(btn);
   });
