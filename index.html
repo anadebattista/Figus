@@ -656,10 +656,22 @@ async function fetchUserInfo() {
 const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 async function sheetsGet(range) {
-  const r = await fetch(`${BASE}/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
-  return r.json();
+  try {
+    const url = `${BASE}/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`;
+    console.log(`GET ${url}`);
+    const r = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!r.ok) {
+      const errText = await r.text();
+      console.error(`Error ${r.status}:`, errText);
+      throw new Error(`HTTP ${r.status}: ${errText}`);
+    }
+    return r.json();
+  } catch(e) {
+    console.error(`sheetsGet error para ${range}:`, e);
+    throw e;
+  }
 }
 
 async function sheetsAppend(range, values) {
@@ -701,45 +713,83 @@ async function loadData() {
     
     // Load catalog from Stickers sheet
     // Columns: code, country, country_code, number, description, type, category, is_official, created_at
+    console.log('Cargando catálogo desde Stickers...');
     const catResp = await sheetsGet('Stickers!A:I');
+    if (catResp.error) {
+      console.error('Error en Stickers:', catResp.error);
+      throw new Error(`Error al leer Stickers: ${catResp.error.message}`);
+    }
     catalogoData = {};
     const catRows = catResp.values || [];
-    catRows.slice(1).forEach(row => {
-      if (!row[3]) return; // number is at index 3
-      const num = parseInt(row[3]);
-      catalogoData[num] = {
-        numero: num,
-        code: row[0] || '',
-        seleccion: row[1] || 'FIFA',
-        country_code: row[2] || '',
-        descripcion: row[4] || `Figurita #${num}`,
-        type: row[5] || '',
-        categoria: row[6] || 'jugador',
-        is_official: row[7] || 'Yes',
-        created_at: row[8] || ''
-      };
+    console.log(`Encontradas ${catRows.length} filas en Stickers (incluyendo encabezado)`);
+    
+    catRows.slice(1).forEach((row, idx) => {
+      if (!row || !row[3]) return; // number is at index 3
+      try {
+        const num = parseInt(row[3]);
+        if (isNaN(num)) return;
+        catalogoData[num] = {
+          numero: num,
+          code: row[0] || '',
+          seleccion: row[1] || 'FIFA',
+          country_code: row[2] || '',
+          descripcion: row[4] || `Figurita #${num}`,
+          type: row[5] || '',
+          categoria: row[6] || 'jugador',
+          is_official: row[7] || 'Yes',
+          created_at: row[8] || ''
+        };
+      } catch(e) {
+        console.warn(`Error procesando fila ${idx}:`, e);
+      }
     });
+    console.log(`✅ Catálogo cargado: ${Object.keys(catalogoData).length} figuritas`);
+    
     if (Object.keys(catalogoData).length > 0) {
       CONFIG.TOTAL_STICKERS = Math.max(...Object.keys(catalogoData).map(Number));
     }
 
     // Load user state data from UserData sheet
-    const resp = await sheetsGet('UserData!A:D');
+    console.log('Cargando datos de usuarios desde UserData...');
+    let resp;
+    try {
+      resp = await sheetsGet('UserData!A:D');
+    } catch(e) {
+      console.warn('UserData no existe o no es accesible:', e);
+      resp = { values: [] };
+    }
+    
     allData = {};
     const rows = resp.values || [];
+    console.log(`Encontradas ${rows.length} filas en UserData (incluyendo encabezado)`);
     rows.slice(1).forEach(row => {
-      if (!row[0] || !row[1]) return;
-      const num = parseInt(row[0]);
-      const user = row[1] || '';
-      const estado = row[2] || 'missing';
-      const qty = parseInt(row[3]) || 0;
-      const key = `${user}|${num}`;
-      allData[key] = { numero: num, usuario: user, estado, cantidad_rep: qty };
+      if (!row || !row[0] || !row[1]) return;
+      try {
+        const num = parseInt(row[0]);
+        const user = row[1];
+        const estado = row[2] || 'missing';
+        const qty = parseInt(row[3]) || 0;
+        if (isNaN(num)) return;
+        const key = `${user}|${num}`;
+        allData[key] = { numero: num, usuario: user, estado, cantidad_rep: qty };
+      } catch(e) {
+        console.warn('Error procesando UserData:', e);
+      }
     });
+    console.log(`✅ Datos de usuarios cargados: ${Object.keys(allData).length} registros`);
 
     // Load trades
-    const tresp = await sheetsGet('Intercambios!A:F');
+    console.log('Cargando intercambios...');
+    let tresp;
+    try {
+      tresp = await sheetsGet('Intercambios!A:F');
+    } catch(e) {
+      console.warn('Intercambios no existe o no es accesible:', e);
+      tresp = { values: [] };
+    }
+    
     const trows = tresp.values || [];
+    console.log(`Encontradas ${trows.length} filas en Intercambios (incluyendo encabezado)`);
     tradesData = trows.slice(1).map(r => ({
       fecha: r[0] || '',
       de: r[1] || '',
@@ -748,6 +798,13 @@ async function loadData() {
       recibe: r[4] || '',
       notas: r[5] || ''
     })).filter(t => t.de);
+    console.log(`✅ Intercambios cargados: ${tradesData.length}`);
+
+    if (Object.keys(catalogoData).length === 0) {
+      document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas en la hoja Stickers. Verificá que tenga datos.</div>`;
+      setSyncing(false);
+      return;
+    }
 
     updateStats();
     populateTeamFilters();
@@ -759,8 +816,8 @@ async function loadData() {
     renderMemberStats();
     updateConfigStatus();
   } catch(e) {
-    console.error(e);
-    document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">❌ Error al cargar datos: ${e.message}</div>`;
+    console.error('Error en loadData:', e);
+    document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">❌ Error: ${e.message}</div>`;
   }
   setSyncing(false);
 }
