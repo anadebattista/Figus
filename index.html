@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Álbum FIFA 2026 — Familia</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0f4ff;
+    --muted: #8892a4;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --purple: #a78bfa;
+    --radius: 10px;
+    --transition: 0.18s ease;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 24px; padding: 24px;
+  }
+  .login-card {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 16px; padding: 48px 40px; text-align: center;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 0 60px rgba(59,130,246,0.08);
+  }
+  .login-logo { font-size: 48px; margin-bottom: 16px; }
+  .login-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .btn-google {
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+    background: #fff; color: #1a1a1a; border: none; border-radius: 8px;
+    padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
+    width: 100%; transition: var(--transition);
+  }
+  .btn-google:hover { background: #f0f0f0; }
+  .btn-google svg { width: 20px; height: 20px; }
+
+  /* CONFIG ERROR */
+  #config-warning {
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 14px 16px; font-size: 13px; color: #fca5a5;
+    margin-top: 16px; text-align: left; display: none;
+  }
+  #config-warning code { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  /* APP LAYOUT */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 20px; height: 56px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-brand { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .topbar-brand span { color: var(--accent2); }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px 4px 4px; font-size: 13px;
+  }
+  .user-avatar {
+    width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .btn-sm {
+    background: transparent; border: 1px solid var(--border2); color: var(--muted);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: var(--transition);
+  }
+  .btn-sm:hover { color: var(--text); border-color: var(--accent); }
+  .sync-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .sync-indicator.syncing { background: var(--yellow); animation: pulse 1s infinite; }
+
+  /* NAV */
+  .nav {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; gap: 0; overflow-x: auto; padding: 0 20px;
+  }
+  .nav-tab {
+    padding: 12px 18px; font-size: 14px; font-weight: 500; color: var(--muted);
+    border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent;
+    white-space: nowrap; transition: var(--transition);
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 24px 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* STATS CARDS */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+  }
+  .stat-num { font-size: 32px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.yellow .stat-num { color: var(--yellow); }
+  .stat-card.red .stat-num { color: var(--red); }
+  .stat-card.blue .stat-num { color: var(--accent2); }
+  .stat-card.purple .stat-num { color: var(--purple); }
+
+  /* PROGRESS BAR */
+  .progress-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+  .progress-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .progress-bar { height: 10px; background: var(--surface2); border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
+  .progress-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width 0.5s ease; }
+  .progress-sub { font-size: 12px; color: var(--muted); }
+
+  /* CONTROLS */
+  .controls { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .search-box {
+    flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 14px;
+  }
+  .search-box:focus { outline: none; border-color: var(--accent); }
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border2); color: var(--text);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+
+  /* STICKER GRID */
+  .sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+  .sticker-cell {
+    aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: 2px solid transparent; transition: var(--transition);
+    position: relative; user-select: none;
+  }
+  .sticker-cell:hover { transform: scale(1.08); z-index: 2; }
+  .sticker-cell .num { font-size: 14px; font-weight: 800; }
+  .sticker-cell .qty { font-size: 9px; font-weight: 600; position: absolute; top: 3px; right: 4px; opacity: 0.8; }
+
+  .sticker-cell.missing { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+  .sticker-cell.owned   { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .sticker-cell.repeated { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: var(--yellow); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 16px;
+    padding: 28px; max-width: 380px; width: 100%;
+  }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .btn-action {
+    padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent; transition: var(--transition); text-align: left;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .btn-action.missing-btn { background: var(--surface2); border-color: var(--border2); color: var(--muted); }
+  .btn-action.owned-btn   { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .btn-action.repeated-btn { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); color: var(--yellow); }
+  .btn-action:hover { filter: brightness(1.2); }
+  .btn-action.active-state { filter: brightness(1.3); box-shadow: 0 0 0 2px currentColor; }
+  .qty-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .qty-row label { font-size: 13px; color: var(--muted); }
+  .qty-input {
+    width: 70px; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 14px; text-align: center;
+  }
+  .modal-close { background: transparent; border: 1px solid var(--border2); color: var(--muted); border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; width: 100%; transition: var(--transition); }
+  .modal-close:hover { color: var(--text); }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge.owned { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge.repeated { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .badge.missing { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  /* INTERCAMBIOS */
+  .trade-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+  .trade-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .trade-users { font-size: 14px; font-weight: 600; }
+  .trade-date { font-size: 12px; color: var(--muted); }
+  .trade-stickers { font-size: 13px; color: var(--muted); }
+  .trade-stickers strong { color: var(--text); }
+
+  /* MATCH CARD */
+  .match-card {
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: gap;
+    gap: 12px;
+  }
+  .match-info { flex: 1; }
+  .match-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .match-nums { font-size: 12px; color: var(--muted); }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .form-input {
+    background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 14px;
+  }
+  .form-input:focus { outline: none; border-color: var(--accent); }
+  .btn-primary {
+    background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* WHATSAPP */
+  .whatsapp-box {
+    background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2);
+    border-radius: var(--radius); padding: 16px; margin-top: 16px;
+  }
+  .whatsapp-box h4 { font-size: 13px; color: var(--green); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .whatsapp-msg { font-size: 12px; color: var(--muted); background: var(--surface2); border-radius: 6px; padding: 10px; white-space: pre-wrap; margin-bottom: 8px; font-family: monospace; }
+  .btn-whatsapp {
+    background: #22c55e; color: white; border: none; border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* FERIA MODE */
+  .feria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .feria-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .feria-col h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .feria-nums { display: flex; flex-wrap: wrap; gap: 6px; }
+  .feria-chip {
+    padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700;
+  }
+  .feria-chip.missing { background: rgba(239,68,68,0.15); color: #fca5a5; }
+  .feria-chip.repeated { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  /* USER SELECTOR */
+  .user-selector { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .user-pill {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; transition: var(--transition);
+  }
+  .user-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* SETUP PANEL */
+  .setup-panel {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 28px; margin-bottom: 24px;
+  }
+  .setup-panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .setup-step { display: flex; gap: 12px; margin-bottom: 20px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .step-content { flex: 1; }
+  .step-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .step-content p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .step-content code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; color: var(--accent2); }
+
+  /* ANIMATIONS */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .section.active { animation: fadeIn 0.2s ease; }
+
+  /* RESPONSIVE */
+  @media(max-width:600px) {
+    .feria-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .sticker-grid { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+    .main { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     CONFIGURACIÓN — EDITÁ ESTOS VALORES
+     ============================================================ -->
+<script>
+const CONFIG = {
+  // 1. Tu Client ID de Google Cloud Console
+  CLIENT_ID: '896898801850-camfjk5jpbki733n3u63of5ea02srer3.apps.googleusercontent.com',
+
+
+  // 2. El ID de tu Google Sheet (está en la URL: docs.google.com/spreadsheets/d/ESTE_ID/edit)
+  SHEET_ID: '1Awyslbx9VJzkbUTKWawj6A2hyCvoR6G2KWilj0djD4o',
+
+  // 3. Nombres de los 4 integrantes de la familia
+  FAMILY_MEMBERS: ['Ana', 'Facu', 'Alfon', 'Emi'],
+
+  // 4. Total de figuritas del álbum FIFA 2026
+  TOTAL_STICKERS: 682,
+};
+</script>
+<!-- ============================================================ -->
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚽</div>
+    <div class="login-title">Álbum FIFA 2026</div>
+    <div class="login-sub">Gestión familiar de figuritas</div>
+    <button class="btn-google" onclick="signIn()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Iniciar sesión con Google
+    </button>
+    <div id="config-warning">
+      ⚠️ <strong>Configuración pendiente:</strong> Editá el archivo <code>index.html</code> y completá <code>CLIENT_ID</code> y <code>SHEET_ID</code> en la sección CONFIG antes de usar la app.
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">⚽ <span>FIFA 2026</span> — Álbum Familiar</div>
+    <div class="topbar-right">
+      <div class="sync-indicator" id="sync-dot" title="Sincronizado"></div>
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">—</span>
+      </div>
+      <button class="btn-sm" onclick="signOut()">Salir</button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-tab active" onclick="showTab('album')">📖 Álbum</button>
+    <button class="nav-tab" onclick="showTab('repetidas')">🔁 Repetidas</button>
+    <button class="nav-tab" onclick="showTab('intercambios')">🤝 Intercambios</button>
+    <button class="nav-tab" onclick="showTab('feria')">🏪 Modo Feria</button>
+    <button class="nav-tab" onclick="showTab('stats')">📊 Estadísticas</button>
+    <button class="nav-tab" onclick="showTab('config')">⚙️ Configurar</button>
+  </nav>
+
+  <div class="main">
+
+    <!-- ===== ÁLBUM ===== -->
+    <div id="tab-album" class="section active">
+      <div class="stats-grid" id="quick-stats">
+        <div class="stat-card green"><div class="stat-num" id="s-owned">0</div><div class="stat-label">Pegadas</div></div>
+        <div class="stat-card yellow"><div class="stat-num" id="s-rep">0</div><div class="stat-label">Repetidas</div></div>
+        <div class="stat-card red"><div class="stat-num" id="s-miss">0</div><div class="stat-label">Faltan</div></div>
+        <div class="stat-card blue"><div class="stat-num" id="s-pct">0%</div><div class="stat-label">Completado</div></div>
+      </div>
+      <div class="progress-section">
+        <div class="progress-title">
+          <span>Progreso del álbum</span>
+          <span id="prog-label" style="color:var(--accent2)">0 / 0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-bar" style="width:0%"></div></div>
+        <div class="progress-sub">Figuritas únicas pegadas en el álbum familiar</div>
+      </div>
+
+      <div class="controls">
+        <input class="search-box" id="search-input" type="text" placeholder="Buscar por número..." oninput="renderGrid()">
+        <select class="filter-select" id="filter-status" onchange="renderGrid()">
+          <option value="all">Todos los estados</option>
+          <option value="missing">Faltan</option>
+          <option value="owned">Pegadas</option>
+          <option value="repeated">Repetidas</option>
+        </select>
+        <select class="filter-select" id="filter-user" onchange="renderGrid()">
+          <option value="all">Todos</option>
+        </select>
+        <button class="btn-sm" onclick="loadData()" style="padding:8px 14px;font-size:13px">↻ Actualizar</button>
+      </div>
+
+      <div class="sticker-grid" id="sticker-grid"></div>
+    </div>
+
+    <!-- ===== REPETIDAS ===== -->
+    <div id="tab-repetidas" class="section">
+      <div class="controls">
+        <select class="filter-select" id="rep-user-filter" onchange="renderRepetidas()">
+          <option value="all">Todos los usuarios</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>N°</th><th>Usuario</th><th>Cantidad</th><th>Estado</th></tr></thead>
+          <tbody id="rep-table-body"></tbody>
+        </table>
+      </div>
+      <div class="whatsapp-box" id="whatsapp-rep" style="display:none">
+        <h4>📲 Compartir por WhatsApp</h4>
+        <div class="whatsapp-msg" id="wa-rep-msg"></div>
+        <button class="btn-whatsapp" onclick="shareWhatsapp('rep')">📤 Abrir en WhatsApp</button>
+      </div>
+    </div>
+
+    <!-- ===== INTERCAMBIOS ===== -->
+    <div id="tab-intercambios" class="section">
+      <h3 style="margin-bottom:16px;font-size:15px">Coincidencias automáticas</h3>
+      <div id="matches-list"></div>
+      <h3 style="margin-bottom:16px;font-size:15px;margin-top:24px">Registrar intercambio</h3>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>De</label>
+            <select class="form-input" id="trade-from"></select>
+          </div>
+          <div class="form-group">
+            <label>Para</label>
+            <select class="form-input" id="trade-to"></select>
+          </div>
+          <div class="form-group">
+            <label>Figuritas que da (separadas por coma)</label>
+            <input class="form-input" type="text" id="trade-gives" placeholder="ej: 12, 45, 78">
+          </div>
+          <div class="form-group">
+            <label>Figuritas que recibe</label>
+            <input class="form-input" type="text" id="trade-gets" placeholder="ej: 33, 91">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveTrade()">Registrar intercambio</button>
+      </div>
+      <h3 style="margin-bottom:12px;font-size:15px">Historial</h3>
+      <div id="trades-history"></div>
+    </div>
+
+    <!-- ===== FERIA ===== -->
+    <div id="tab-feria" class="section">
+      <div style="margin-bottom:16px">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Seleccioná un integrante para ver su lista de feria</p>
+        <div class="user-selector" id="feria-user-selector"></div>
+      </div>
+      <div class="feria-grid">
+        <div class="feria-col">
+          <h3 style="color:var(--red)">❌ Me faltan</h3>
+          <div class="feria-nums" id="feria-missing"></div>
+        </div>
+        <div class="feria-col">
+          <h3 style="color:var(--yellow)">🔁 Tengo repetidas</h3>
+          <div class="feria-nums" id="feria-repeated"></div>
+        </div>
+      </div>
+      <div class="whatsapp-box" style="margin-top:16px">
+        <h4>📲 Compartir lista de feria</h4>
+        <div class="whatsapp-msg" id="wa-feria-msg"></div>
+        <button class="btn-whatsapp" onclick="shareWhatsapp('feria')">📤 Abrir en WhatsApp</button>
+      </div>
+    </div>
+
+    <!-- ===== ESTADÍSTICAS ===== -->
+    <div id="tab-stats" class="section">
+      <div class="stats-grid" id="full-stats"></div>
+      <h3 style="margin:20px 0 12px;font-size:15px">Progreso por integrante</h3>
+      <div id="member-stats"></div>
+    </div>
+
+    <!-- ===== CONFIGURAR ===== -->
+    <div id="tab-config" class="section">
+      <div class="setup-panel">
+        <h3>🚀 Guía de configuración inicial</h3>
+        <div class="setup-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Crear el Google Sheet</h4>
+            <p>Creá una planilla nueva en Google Drive. Necesita 3 hojas con estos nombres exactos:<br>
+            <code>Stickers</code> · <code>Intercambios</code> · <code>Config</code><br><br>
+            En la hoja <code>Stickers</code>, la fila 1 debe tener estos encabezados:<br>
+            <code>numero | usuario | estado | cantidad_rep</code></p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Compartir el Sheet</h4>
+            <p>Compartí la planilla con los 4 integrantes de la familia (Editor). El ID del Sheet está en la URL de la planilla — copialo y pegalo en <code>CONFIG.SHEET_ID</code>.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Crear proyecto en Google Cloud</h4>
+            <p>Entrá a <strong>console.cloud.google.com</strong> → Nuevo proyecto → Habilitar APIs:<br>
+            <code>Google Sheets API</code> y <code>Google Drive API</code><br><br>
+            Luego: APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID<br>
+            Tipo: <strong>Web application</strong><br>
+            Authorized JavaScript origins: <code>http://localhost</code> (dev) y tu dominio de GitHub Pages<br><br>
+            Copiá el Client ID y pegalo en <code>CONFIG.CLIENT_ID</code>.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Deploy en GitHub Pages</h4>
+            <p>Subí el archivo <code>index.html</code> a un repositorio de GitHub.<br>
+            Settings → Pages → Branch: main → carpeta: / (root)<br>
+            La URL será: <code>https://tuusuario.github.io/tu-repo/</code><br><br>
+            Agregá esa URL a los Authorized origins en Google Cloud.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Invitar a la familia</h4>
+            <p>Compartí la URL de GitHub Pages con los 4 integrantes. Cada uno inicia sesión con su cuenta Google y puede editar. Solo pueden usar la app quienes tengan acceso al Sheet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+        <h3 style="margin-bottom:16px;font-size:15px">Estado de conexión</h3>
+        <div id="config-status" style="font-size:13px;color:var(--muted)">Cargando...</div>
+        <div style="margin-top:16px">
+          <button class="btn-primary" onclick="loadData()">Forzar sincronización</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL FIGURITA -->
+<div class="modal-overlay" id="sticker-modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Figurita #0</div>
+    <div class="modal-sub" id="modal-sub">¿Qué estado tiene?</div>
+    <div class="modal-actions">
+      <button class="btn-action missing-btn"  id="btn-missing"  onclick="setStatus('missing')">  ⬜ No la tengo</button>
+      <button class="btn-action owned-btn"    id="btn-owned"    onclick="setStatus('owned')">    ✅ La pegué</button>
+      <button class="btn-action repeated-btn" id="btn-repeated" onclick="setStatus('repeated')"> 🔁 La tengo repetida</button>
+    </div>
+    <div class="qty-row" id="qty-row" style="display:none">
+      <label>Cantidad repetidas:</label>
+      <input class="qty-input" id="qty-input" type="number" min="1" max="99" value="1">
+    </div>
+    <div style="height:12px"></div>
+    <button class="modal-close" onclick="closeModalDirect()">Cerrar</button>
+  </div>
+</div>
+
+<!-- SCRIPTS -->
+<script>
+// ============================================================
+// GOOGLE IDENTITY SERVICES
+// ============================================================
+let tokenClient, accessToken = null;
+let currentUser = null;
+let selectedFeriaUser = null;
+let currentModalSticker = null;
+let allData = {}; // { "user|num": {usuario, numero, estado, cantidad_rep} }
+let tradesData = [];
+let saving = false;
+
+function checkConfig() {
+  if (CONFIG.CLIENT_ID === 'TU_CLIENT_ID_AQUI.apps.googleusercontent.com' || CONFIG.SHEET_ID === 'TU_SHEET_ID_AQUI') {
+    document.getElementById('config-warning').style.display = 'block';
+    return false;
+  }
+  return true;
+}
+
+function initGoogleAuth() {
+  checkConfig();
+  google.accounts.id.initialize({
+    client_id: CONFIG.CLIENT_ID,
+    callback: handleCredential,
+    auto_select: false,
+  });
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+    callback: (resp) => {
+      if (resp.error) return;
+      accessToken = resp.access_token;
+      loadData();
+    },
+  });
+}
+
+function signIn() {
+  if (!checkConfig()) return alert('Completá CLIENT_ID y SHEET_ID en la sección CONFIG del archivo index.html');
+  tokenClient.requestAccessToken();
+}
+function handleCredential(resp) {}
+
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ============================================================
+// FETCH USER INFO
+// ============================================================
+async function fetchUserInfo() {
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const u = await r.json();
+  currentUser = u.name || u.email;
+  document.getElementById('user-name').textContent = currentUser;
+  const av = document.getElementById('user-avatar');
+  if (u.picture) {
+    av.style.background = 'none';
+    av.innerHTML = `<img src="${u.picture}" style="width:26px;height:26px;border-radius:50%;object-fit:cover">`;
+  } else {
+    av.textContent = (currentUser || '?')[0].toUpperCase();
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+  populateUserSelects();
+  return currentUser;
+}
+
+// ============================================================
+// SHEETS API
+// ============================================================
+const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+async function sheetsGet(range) {
+  const r = await fetch(`${BASE}/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  return r.json();
+}
+
+async function sheetsAppend(range, values) {
+  const r = await fetch(`${BASE}/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  return r.json();
+}
+
+async function sheetsBatchUpdate(data) {
+  const r = await fetch(`${BASE}/${CONFIG.SHEET_ID}/values:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data })
+  });
+  return r.json();
+}
+
+async function sheetsClear(range) {
+  await fetch(`${BASE}/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}:clear`, {
+    method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }
+  });
+}
+
+// ============================================================
+// LOAD DATA
+// ============================================================
+function setSyncing(v) {
+  document.getElementById('sync-dot').className = 'sync-indicator' + (v ? ' syncing' : '');
+}
+
+async function loadData() {
+  if (!accessToken) return;
+  setSyncing(true);
+  try {
+    await fetchUserInfo();
+    // Load stickers
+    const resp = await sheetsGet('Stickers!A:D');
+    allData = {};
+    const rows = resp.values || [];
+    rows.slice(1).forEach(row => {
+      if (!row[0]) return;
+      const num = parseInt(row[0]);
+      const user = row[1] || '';
+      const estado = row[2] || 'missing';
+      const qty = parseInt(row[3]) || 0;
+      const key = `${user}|${num}`;
+      allData[key] = { numero: num, usuario: user, estado, cantidad_rep: qty };
+    });
+
+    // Load trades
+    const tresp = await sheetsGet('Intercambios!A:F');
+    const trows = tresp.values || [];
+    tradesData = trows.slice(1).map(r => ({
+      fecha: r[0] || '',
+      de: r[1] || '',
+      para: r[2] || '',
+      da: r[3] || '',
+      recibe: r[4] || '',
+      notas: r[5] || ''
+    })).filter(t => t.de);
+
+    updateStats();
+    renderGrid();
+    renderRepetidas();
+    renderMatches();
+    renderTrades();
+    renderFeria();
+    renderMemberStats();
+    updateConfigStatus();
+  } catch(e) {
+    console.error(e);
+  }
+  setSyncing(false);
+}
+
+// ============================================================
+// STICKER STATUS HELPERS
+// ============================================================
+function getUserStatus(user, num) {
+  const key = `${user}|${num}`;
+  return allData[key] || { numero: num, usuario: user, estado: 'missing', cantidad_rep: 0 };
+}
+
+// Family-level: owned = at least one user has it owned or repeated
+function getFamilyStatus(num) {
+  for (const m of CONFIG.FAMILY_MEMBERS) {
+    const s = getUserStatus(m, num);
+    if (s.estado === 'owned' || s.estado === 'repeated') return s.estado;
+  }
+  return 'missing';
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const totalUnique = CONFIG.TOTAL_STICKERS;
+  let owned = 0, rep = 0, miss = 0;
+  for (let n = 1; n <= totalUnique; n++) {
+    const s = getFamilyStatus(n);
+    if (s === 'owned') owned++;
+    else if (s === 'repeated') { owned++; rep++; }
+    else miss++;
+  }
+  document.getElementById('s-owned').textContent = owned;
+  document.getElementById('s-rep').textContent = rep;
+  document.getElementById('s-miss').textContent = miss;
+  const pct = Math.round(owned / totalUnique * 100);
+  document.getElementById('s-pct').textContent = pct + '%';
+  document.getElementById('prog-label').textContent = `${owned} / ${totalUnique}`;
+  document.getElementById('prog-bar').style.width = pct + '%';
+}
+
+// ============================================================
+// GRID RENDER
+// ============================================================
+function renderGrid() {
+  const search = document.getElementById('search-input').value.trim();
+  const filterStatus = document.getElementById('filter-status').value;
+  const filterUser = document.getElementById('filter-user').value;
+  const grid = document.getElementById('sticker-grid');
+  grid.innerHTML = '';
+  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+    if (search && !String(n).includes(search)) continue;
+    let estado, qty = 0;
+    if (filterUser === 'all') {
+      estado = getFamilyStatus(n);
+      // Count total repeated
+      CONFIG.FAMILY_MEMBERS.forEach(m => {
+        const s = getUserStatus(m, n);
+        if (s.estado === 'repeated') qty += Math.max(1, s.cantidad_rep);
+      });
+    } else {
+      const s = getUserStatus(filterUser, n);
+      estado = s.estado;
+      qty = s.cantidad_rep;
+    }
+    if (filterStatus !== 'all' && estado !== filterStatus) continue;
+    const cell = document.createElement('div');
+    cell.className = `sticker-cell ${estado}`;
+    cell.innerHTML = `<span class="num">${n}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
+    cell.title = `Figurita #${n}`;
+    cell.onclick = () => openModal(n, filterUser === 'all' ? currentUser : filterUser);
+    grid.appendChild(cell);
+  }
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openModal(num, user) {
+  currentModalSticker = { num, user };
+  document.getElementById('modal-title').textContent = `Figurita #${num}`;
+  document.getElementById('modal-sub').textContent = `Usuario: ${user}`;
+  const current = getUserStatus(user, num);
+  ['missing','owned','repeated'].forEach(s => {
+    document.getElementById(`btn-${s}`).classList.toggle('active-state', current.estado === s);
+  });
+  document.getElementById('qty-row').style.display = current.estado === 'repeated' ? 'flex' : 'none';
+  document.getElementById('qty-input').value = current.cantidad_rep || 1;
+  document.getElementById('sticker-modal').style.display = 'flex';
+}
+function closeModal(e) { if (e.target.id === 'sticker-modal') closeModalDirect(); }
+function closeModalDirect() { document.getElementById('sticker-modal').style.display = 'none'; currentModalSticker = null; }
+
+async function setStatus(status) {
+  if (!currentModalSticker || saving) return;
+  const { num, user } = currentModalSticker;
+  ['missing','owned','repeated'].forEach(s => document.getElementById(`btn-${s}`).classList.remove('active-state'));
+  document.getElementById(`btn-${status}`).classList.add('active-state');
+  document.getElementById('qty-row').style.display = status === 'repeated' ? 'flex' : 'none';
+  const qty = status === 'repeated' ? (parseInt(document.getElementById('qty-input').value) || 1) : 0;
+
+  // Update local
+  const key = `${user}|${num}`;
+  allData[key] = { numero: num, usuario: user, estado: status, cantidad_rep: qty };
+
+  // Save to sheet
+  saving = true;
+  setSyncing(true);
+  try {
+    // Find existing row
+    const resp = await sheetsGet('Stickers!A:D');
+    const rows = resp.values || [];
+    let rowIdx = -1;
+    rows.forEach((r, i) => { if (parseInt(r[0]) === num && r[1] === user) rowIdx = i; });
+    if (rowIdx >= 0) {
+      // Update
+      const range = `Stickers!A${rowIdx+1}:D${rowIdx+1}`;
+      await sheetsBatchUpdate([{ range, values: [[num, user, status, qty]] }]);
+    } else {
+      // Append
+      await sheetsAppend('Stickers!A:D', [[num, user, status, qty]]);
+    }
+    updateStats();
+    renderGrid();
+    renderRepetidas();
+    renderFeria();
+    renderMemberStats();
+  } catch(e) { console.error(e); }
+  saving = false;
+  setSyncing(false);
+}
+
+// ============================================================
+// REPETIDAS
+// ============================================================
+function renderRepetidas() {
+  const filterUser = document.getElementById('rep-user-filter').value;
+  const tbody = document.getElementById('rep-table-body');
+  tbody.innerHTML = '';
+  const entries = Object.values(allData).filter(d => d.estado === 'repeated');
+  if (filterUser !== 'all') entries.filter(d => d.usuario === filterUser);
+  const filtered = filterUser === 'all' ? entries : entries.filter(d => d.usuario === filterUser);
+  filtered.sort((a,b) => a.numero - b.numero).forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong>#${d.numero}</strong></td><td>${d.usuario}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
+    tbody.appendChild(tr);
+  });
+  // WhatsApp message
+  if (filtered.length > 0) {
+    const user = filterUser === 'all' ? 'la familia' : filterUser;
+    const nums = filtered.map(d => `#${d.numero}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
+    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${user}*\n\n${nums}\n\n¿Alguien las necesita? 🔁`;
+    document.getElementById('wa-rep-msg').textContent = msg;
+    document.getElementById('whatsapp-rep').style.display = 'block';
+  }
+}
+
+// ============================================================
+// MATCHES (coincidencias automáticas)
+// ============================================================
+function renderMatches() {
+  const container = document.getElementById('matches-list');
+  container.innerHTML = '';
+  const matches = [];
+  // For each pair of users, find where A has repeated and B needs it
+  for (let i = 0; i < CONFIG.FAMILY_MEMBERS.length; i++) {
+    for (let j = 0; j < CONFIG.FAMILY_MEMBERS.length; j++) {
+      if (i === j) continue;
+      const userA = CONFIG.FAMILY_MEMBERS[i];
+      const userB = CONFIG.FAMILY_MEMBERS[j];
+      const canGive = [];
+      for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+        const a = getUserStatus(userA, n);
+        const b = getUserStatus(userB, n);
+        if (a.estado === 'repeated' && b.estado === 'missing') canGive.push(n);
+      }
+      if (canGive.length > 0) matches.push({ from: userA, to: userB, stickers: canGive });
+    }
+  }
+  if (matches.length === 0) {
+    container.innerHTML = `<p style="color:var(--muted);font-size:14px">No hay coincidencias detectadas todavía. Registrá más figuritas.</p>`;
+    return;
+  }
+  matches.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'match-card';
+    const preview = m.stickers.slice(0,8).map(n=>`#${n}`).join(', ') + (m.stickers.length > 8 ? ` +${m.stickers.length-8}` : '');
+    div.innerHTML = `
+      <div class="match-info">
+        <div class="match-title">🎯 <strong>${m.from}</strong> puede darle a <strong>${m.to}</strong></div>
+        <div class="match-nums">${m.stickers.length} figurita${m.stickers.length>1?'s':''}: ${preview}</div>
+      </div>
+      <button class="btn-primary" style="font-size:12px;padding:8px 12px" onclick='prefillTrade("${m.from}","${m.to}","${m.stickers.join(',')}")'>Registrar</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function prefillTrade(from, to, stickers) {
+  document.getElementById('trade-from').value = from;
+  document.getElementById('trade-to').value = to;
+  document.getElementById('trade-gives').value = stickers.split(',').slice(0,20).join(', ');
+  showTab('intercambios');
+}
+
+// ============================================================
+// TRADES
+// ============================================================
+async function saveTrade() {
+  const from = document.getElementById('trade-from').value;
+  const to = document.getElementById('trade-to').value;
+  const gives = document.getElementById('trade-gives').value.trim();
+  const gets = document.getElementById('trade-gets').value.trim();
+  if (!from || !to || !gives) return alert('Completá los campos obligatorios');
+  if (from === to) return alert('Los usuarios deben ser distintos');
+  setSyncing(true);
+  const fecha = new Date().toLocaleDateString('es-AR');
+  try {
+    await sheetsAppend('Intercambios!A:F', [[fecha, from, to, gives, gets, '']]);
+    document.getElementById('trade-gives').value = '';
+    document.getElementById('trade-gets').value = '';
+    tradesData.push({ fecha, de: from, para: to, da: gives, recibe: gets, notas: '' });
+    renderTrades();
+  } catch(e) { console.error(e); }
+  setSyncing(false);
+}
+
+function renderTrades() {
+  const container = document.getElementById('trades-history');
+  container.innerHTML = '';
+  if (tradesData.length === 0) {
+    container.innerHTML = `<p style="color:var(--muted);font-size:14px">No hay intercambios registrados todavía.</p>`;
+    return;
+  }
+  [...tradesData].reverse().forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'trade-card';
+    div.innerHTML = `
+      <div class="trade-header">
+        <div class="trade-users">🤝 ${t.de} → ${t.para}</div>
+        <div class="trade-date">${t.fecha}</div>
+      </div>
+      <div class="trade-stickers">Da: <strong>${t.da}</strong>${t.recibe ? ` · Recibe: <strong>${t.recibe}</strong>` : ''}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ============================================================
+// FERIA
+// ============================================================
+function renderFeria() {
+  const user = selectedFeriaUser || CONFIG.FAMILY_MEMBERS[0];
+  const missing = [], repeated = [];
+  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+    const s = getUserStatus(user, n);
+    if (s.estado === 'missing') missing.push(n);
+    else if (s.estado === 'repeated') repeated.push(n);
+  }
+  const missCont = document.getElementById('feria-missing');
+  const repCont = document.getElementById('feria-repeated');
+  missCont.innerHTML = '';
+  repCont.innerHTML = '';
+  missing.slice(0, 100).forEach(n => {
+    const chip = document.createElement('span');
+    chip.className = 'feria-chip missing';
+    chip.textContent = n;
+    missCont.appendChild(chip);
+  });
+  repeated.forEach(n => {
+    const chip = document.createElement('span');
+    chip.className = 'feria-chip repeated';
+    chip.textContent = n;
+    repCont.appendChild(chip);
+  });
+  const wa = `⚽ *${user} — Lista de feria FIFA 2026*\n\n❌ *Me faltan:* ${missing.slice(0,40).join(', ')}${missing.length>40?`... (+${missing.length-40})`:''}${repeated.length>0?`\n\n🔁 *Tengo repetidas:* ${repeated.map(n=>`#${n}`).join(', ')}`:''}`;
+  document.getElementById('wa-feria-msg').textContent = wa;
+}
+
+function setFeriaUser(user) {
+  selectedFeriaUser = user;
+  document.querySelectorAll('.user-pill').forEach(p => p.classList.toggle('active', p.textContent === user));
+  renderFeria();
+}
+
+// ============================================================
+// MEMBER STATS
+// ============================================================
+function renderMemberStats() {
+  const container = document.getElementById('member-stats');
+  container.innerHTML = '';
+  CONFIG.FAMILY_MEMBERS.forEach(user => {
+    let owned = 0, rep = 0, miss = 0;
+    for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+      const s = getUserStatus(user, n);
+      if (s.estado === 'owned') owned++;
+      else if (s.estado === 'repeated') { owned++; rep++; }
+      else miss++;
+    }
+    const pct = Math.round(owned / CONFIG.TOTAL_STICKERS * 100);
+    const div = document.createElement('div');
+    div.className = 'progress-section';
+    div.innerHTML = `
+      <div class="progress-title">
+        <span>👤 ${user}</span>
+        <span style="color:var(--accent2)">${owned} / ${CONFIG.TOTAL_STICKERS}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-sub">${pct}% completado · ${rep} repetidas · ${miss} faltantes</div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Full stats
+  const fs = document.getElementById('full-stats');
+  let totalOwned = 0, totalRep = 0;
+  for (let n = 1; n <= CONFIG.TOTAL_STICKERS; n++) {
+    const s = getFamilyStatus(n);
+    if (s === 'owned' || s === 'repeated') totalOwned++;
+    if (s === 'repeated') totalRep++;
+  }
+  fs.innerHTML = `
+    <div class="stat-card green"><div class="stat-num">${totalOwned}</div><div class="stat-label">Pegadas (familia)</div></div>
+    <div class="stat-card red"><div class="stat-num">${CONFIG.TOTAL_STICKERS - totalOwned}</div><div class="stat-label">Faltan</div></div>
+    <div class="stat-card yellow"><div class="stat-num">${Object.values(allData).filter(d=>d.estado==='repeated').length}</div><div class="stat-label">Repetidas totales</div></div>
+    <div class="stat-card purple"><div class="stat-num">${tradesData.length}</div><div class="stat-label">Intercambios</div></div>
+    <div class="stat-card blue"><div class="stat-num">${Math.round(totalOwned/CONFIG.TOTAL_STICKERS*100)}%</div><div class="stat-label">Completado</div></div>
+  `;
+}
+
+// ============================================================
+// WHATSAPP SHARE
+// ============================================================
+function shareWhatsapp(type) {
+  const msg = type === 'feria'
+    ? document.getElementById('wa-feria-msg').textContent
+    : document.getElementById('wa-rep-msg').textContent;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'feria') renderFeria();
+  if (name === 'stats') renderMemberStats();
+  if (name === 'intercambios') renderMatches();
+}
+
+function populateUserSelects() {
+  // Filter user in album
+  const fu = document.getElementById('filter-user');
+  fu.innerHTML = '<option value="all">Familia completa</option>';
+  CONFIG.FAMILY_MEMBERS.forEach(m => { fu.innerHTML += `<option value="${m}">${m}</option>`; });
+
+  // Repetidas filter
+  const ru = document.getElementById('rep-user-filter');
+  ru.innerHTML = '<option value="all">Todos los usuarios</option>';
+  CONFIG.FAMILY_MEMBERS.forEach(m => { ru.innerHTML += `<option value="${m}">${m}</option>`; });
+
+  // Trade selects
+  const tf = document.getElementById('trade-from');
+  const tt = document.getElementById('trade-to');
+  tf.innerHTML = tt.innerHTML = '';
+  CONFIG.FAMILY_MEMBERS.forEach(m => {
+    tf.innerHTML += `<option value="${m}">${m}</option>`;
+    tt.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  if (CONFIG.FAMILY_MEMBERS.length > 1) tt.selectedIndex = 1;
+
+  // Feria selector
+  const fs = document.getElementById('feria-user-selector');
+  fs.innerHTML = '';
+  CONFIG.FAMILY_MEMBERS.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'user-pill' + (i === 0 ? ' active' : '');
+    btn.textContent = m;
+    btn.onclick = () => setFeriaUser(m);
+    fs.appendChild(btn);
+  });
+  selectedFeriaUser = CONFIG.FAMILY_MEMBERS[0];
+}
+
+function updateConfigStatus() {
+  const el = document.getElementById('config-status');
+  const items = Object.keys(allData).length;
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div>✅ Conectado como <strong>${currentUser}</strong></div>
+      <div>📊 Sheet ID: <code style="font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">${CONFIG.SHEET_ID}</code></div>
+      <div>📦 Registros cargados: <strong>${items}</strong></div>
+      <div>👨‍👩‍👧‍👦 Integrantes: ${CONFIG.FAMILY_MEMBERS.join(', ')}</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  // Load Google APIs
+  const script1 = document.createElement('script');
+  script1.src = 'https://accounts.google.com/gsi/client';
+  script1.onload = () => initGoogleAuth();
+  document.head.appendChild(script1);
+};
+</script>
+
+</body>
+</html>
