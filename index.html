@@ -481,17 +481,13 @@ const CONFIG = {
         <div class="setup-step">
           <div class="step-num">1</div>
           <div class="step-content">
-            <h4>Usar el Google Sheet de figuritas</h4>
-            <p>Creá o usá una planilla en Google Drive con 3 hojas: <br>
-            <code>Stickers</code> · <code>UserData</code> · <code>Intercambios</code><br><br>
-            <strong>Stickers</strong> (catálogo — solo lectura):<br>
-            Encabezados: <code>numero | descripcion | seleccion | categoria | info</code><br>
-            Ejemplo: <code>1 | Escudo Argentina | Argentina | escudo | -</code><br><br>
-            <strong>UserData</strong> (estado por usuario):<br>
-            Encabezados: <code>numero | usuario | estado | cantidad_rep</code><br>
-            Estados: <code>missing | owned | repeated</code><br><br>
-            <strong>Intercambios</strong> (historial):<br>
-            Encabezados: <code>fecha | de | para | da | recibe | notas</code></p>
+            <h4>Estructura del Google Sheet</h4>
+            <p>El Sheet "figus" ya tiene la hoja <strong>Stickers</strong> con el catálogo completo.<br><br>
+            <strong>Columnas de Stickers:</strong><br>
+            <code>A: code</code> · <code>B: country</code> · <code>C: country_code</code> · <code>D: number</code> · <code>E: description</code> · <code>F: type</code> · <code>G: category</code> · <code>H: is_official</code> · <code>I: created_at</code><br><br>
+            Si querés agregar hojas nuevas para registrar el estado por usuario, crealas con estos encabezados:<br><br>
+            <strong>UserData:</strong> <code>numero | usuario | estado | cantidad_rep</code><br>
+            <strong>Intercambios:</strong> <code>fecha | de | para | da | recibe | notas</code></p>
           </div>
         </div>
         <div class="setup-step">
