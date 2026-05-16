@@ -711,39 +711,26 @@ async function loadData() {
   try {
     await fetchUserInfo();
     
-    // Load catalog from Stickers sheet
     console.log('Cargando catálogo desde Stickers...');
     const catResp = await sheetsGet('Stickers!A:I');
     catalogoData = {};
     const catRows = catResp.values || [];
     console.log(`Encontradas ${catRows.length} filas en Stickers`);
     
-    // Log primeras 5 filas para debug
-    console.log('Primeras 5 filas de Stickers:');
-    catRows.slice(0, 5).forEach((row, i) => {
-      console.log(`Fila ${i}:`, row);
-    });
-    
     let validCount = 0, invalidCount = 0;
     catRows.slice(1).forEach((row, idx) => {
-      if (!row) return;
-      const num = row[3] ? parseInt(row[3]) : NaN;
+      if (!row || !row[0]) return; // code is at index 0
       
-      if (isNaN(num)) {
-        invalidCount++;
-        if (invalidCount <= 3) {
-          console.warn(`Fila ${idx+1}: número inválido:`, row[3], '| row completa:', row);
-        }
-        return;
-      }
+      const code = row[0]; // Use CODE as unique identifier
+      const num = parseInt(row[3]) || 0; // number for display (1-20 per country)
       
       validCount++;
-      catalogoData[num] = {
-        numero: num,
-        code: row[0] || '',
+      catalogoData[code] = {
+        code: code,
+        numero: num, // This is for display only
         seleccion: row[1] || 'FIFA',
         country_code: row[2] || '',
-        descripcion: row[4] || `Figurita #${num}`,
+        descripcion: row[4] || `${row[1]} #${num}`,
         type: row[5] || '',
         categoria: row[6] || 'jugador',
         is_official: row[7] || 'Yes',
@@ -751,7 +738,7 @@ async function loadData() {
       };
     });
     
-    console.log(`✅ ${validCount} figuritas cargadas | ${invalidCount} filas ignoradas (sin número válido)`);
+    console.log(`✅ ${validCount} figuritas cargadas`);
     
     if (Object.keys(catalogoData).length === 0) {
       document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas. Verificá la hoja Stickers.</div>`;
@@ -759,25 +746,21 @@ async function loadData() {
       return;
     }
     
-    CONFIG.TOTAL_STICKERS = Math.max(...Object.keys(catalogoData).map(Number));
+    CONFIG.TOTAL_STICKERS = Object.keys(catalogoData).length;
 
-    // Load user state data from UserData sheet (si existe)
+    // Load user state data
     console.log('Cargando datos de usuarios...');
     const resp = await sheetsGet('UserData!A:D');
     allData = {};
     const rows = resp.values || [];
     rows.slice(1).forEach(row => {
       if (!row || !row[0] || !row[1]) return;
-      try {
-        const num = parseInt(row[0]);
-        const user = row[1];
-        const estado = row[2] || 'missing';
-        const qty = parseInt(row[3]) || 0;
-        if (!isNaN(num)) {
-          const key = `${user}|${num}`;
-          allData[key] = { numero: num, usuario: user, estado, cantidad_rep: qty };
-        }
-      } catch(e) {}
+      const code = row[0]; // code identifier
+      const user = row[1];
+      const estado = row[2] || 'missing';
+      const qty = parseInt(row[3]) || 0;
+      const key = `${user}|${code}`;
+      allData[key] = { code, usuario: user, estado, cantidad_rep: qty };
     });
     console.log(`✅ ${Object.keys(allData).length} registros de usuario cargados`);
 
@@ -815,15 +798,15 @@ async function loadData() {
 // ============================================================
 // STICKER STATUS HELPERS
 // ============================================================
-function getUserStatus(user, num) {
-  const key = `${user}|${num}`;
-  return allData[key] || { numero: num, usuario: user, estado: 'missing', cantidad_rep: 0 };
+function getUserStatus(user, code) {
+  const key = `${user}|${code}`;
+  return allData[key] || { code, usuario: user, estado: 'missing', cantidad_rep: 0 };
 }
 
 // Family-level: owned = at least one user has it owned or repeated
-function getFamilyStatus(num) {
+function getFamilyStatus(code) {
   for (const m of CONFIG.FAMILY_MEMBERS) {
-    const s = getUserStatus(m, num);
+    const s = getUserStatus(m, code);
     if (s.estado === 'owned' || s.estado === 'repeated') return s.estado;
   }
   return 'missing';
@@ -835,8 +818,8 @@ function getFamilyStatus(num) {
 function updateStats() {
   const totalUnique = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
   let owned = 0, rep = 0, miss = 0;
-  for (const num in catalogoData) {
-    const s = getFamilyStatus(parseInt(num));
+  for (const code in catalogoData) {
+    const s = getFamilyStatus(code);
     if (s === 'owned') owned++;
     else if (s === 'repeated') { owned++; rep++; }
     else miss++;
@@ -868,27 +851,22 @@ function renderGrid() {
   const grid = document.getElementById('sticker-grid');
   grid.innerHTML = '';
   
-  for (const numStr in catalogoData) {
-    const num = parseInt(numStr);
-    const catalogo = catalogoData[num];
-    const teamName = catalogo.seleccion || catalogo.country || 'FIFA';
+  for (const code in catalogoData) {
+    const catalogo = catalogoData[code];
+    const teamName = catalogo.seleccion || 'FIFA';
     
-    // Apply search filter
-    if (search && !String(num).includes(search) && !catalogo.descripcion.toLowerCase().includes(search.toLowerCase())) continue;
-    
-    // Apply team filter
+    if (search && !code.toLowerCase().includes(search.toLowerCase()) && !catalogo.descripcion.toLowerCase().includes(search.toLowerCase())) continue;
     if (filterTeam !== 'all' && teamName !== filterTeam) continue;
     
     let estado, qty = 0;
     if (filterUser === 'all') {
-      estado = getFamilyStatus(num);
-      // Count total repeated
+      estado = getFamilyStatus(code);
       CONFIG.FAMILY_MEMBERS.forEach(m => {
-        const s = getUserStatus(m, num);
+        const s = getUserStatus(m, code);
         if (s.estado === 'repeated') qty += Math.max(1, s.cantidad_rep);
       });
     } else {
-      const s = getUserStatus(filterUser, num);
+      const s = getUserStatus(filterUser, code);
       estado = s.estado;
       qty = s.cantidad_rep;
     }
@@ -896,9 +874,9 @@ function renderGrid() {
     
     const cell = document.createElement('div');
     cell.className = `sticker-cell ${estado}`;
-    cell.title = `#${num} — ${catalogo.descripcion} (${teamName})`;
-    cell.innerHTML = `<span class="num">${num}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
-    cell.onclick = () => openModal(num, filterUser === 'all' ? currentUser : filterUser);
+    cell.title = `${code} — ${catalogo.descripcion} (${teamName})`;
+    cell.innerHTML = `<span class="num">${catalogo.numero || code}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
+    cell.onclick = () => openModal(code, filterUser === 'all' ? currentUser : filterUser);
     grid.appendChild(cell);
   }
 }
@@ -906,15 +884,15 @@ function renderGrid() {
 // ============================================================
 // MODAL
 // ============================================================
-function openModal(num, user) {
-  currentModalSticker = { num, user };
-  const catalogo = catalogoData[num] || {};
-  const displayName = catalogo.descripcion || `Figurita #${num}`;
-  const displayCountry = catalogo.seleccion || catalogo.country || 'FIFA';
+function openModal(code, user) {
+  currentModalSticker = { code, user };
+  const catalogo = catalogoData[code] || {};
+  const displayName = catalogo.descripcion || `${code}`;
+  const displayCountry = catalogo.seleccion || 'FIFA';
   const displayType = catalogo.type ? `${catalogo.type} • ` : '';
-  document.getElementById('modal-title').textContent = `#${num} — ${displayName}`;
+  document.getElementById('modal-title').textContent = `${code} — ${displayName}`;
   document.getElementById('modal-sub').textContent = `${displayCountry} • ${displayType}${catalogo.categoria || 'jugador'} · Usuario: ${user}`;
-  const current = getUserStatus(user, num);
+  const current = getUserStatus(user, code);
   ['missing','owned','repeated'].forEach(s => {
     document.getElementById(`btn-${s}`).classList.toggle('active-state', current.estado === s);
   });
@@ -927,32 +905,29 @@ function closeModalDirect() { document.getElementById('sticker-modal').style.dis
 
 async function setStatus(status) {
   if (!currentModalSticker || saving) return;
-  const { num, user } = currentModalSticker;
+  const { code, user } = currentModalSticker;
   ['missing','owned','repeated'].forEach(s => document.getElementById(`btn-${s}`).classList.remove('active-state'));
   document.getElementById(`btn-${status}`).classList.add('active-state');
   document.getElementById('qty-row').style.display = status === 'repeated' ? 'flex' : 'none';
   const qty = status === 'repeated' ? (parseInt(document.getElementById('qty-input').value) || 1) : 0;
 
   // Update local
-  const key = `${user}|${num}`;
-  allData[key] = { numero: num, usuario: user, estado: status, cantidad_rep: qty };
+  const key = `${user}|${code}`;
+  allData[key] = { code, usuario: user, estado: status, cantidad_rep: qty };
 
   // Save to sheet
   saving = true;
   setSyncing(true);
   try {
-    // Find existing row in UserData sheet
     const resp = await sheetsGet('UserData!A:D');
     const rows = resp.values || [];
     let rowIdx = -1;
-    rows.forEach((r, i) => { if (parseInt(r[0]) === num && r[1] === user) rowIdx = i; });
+    rows.forEach((r, i) => { if (r[0] === code && r[1] === user) rowIdx = i; });
     if (rowIdx >= 0) {
-      // Update existing row
       const range = `UserData!A${rowIdx+1}:D${rowIdx+1}`;
-      await sheetsBatchUpdate([{ range, values: [[num, user, status, qty]] }]);
+      await sheetsBatchUpdate([{ range, values: [[code, user, status, qty]] }]);
     } else {
-      // Append new row
-      await sheetsAppend('UserData!A:D', [[num, user, status, qty]]);
+      await sheetsAppend('UserData!A:D', [[code, user, status, qty]]);
     }
     updateStats();
     renderGrid();
@@ -973,17 +948,16 @@ function renderRepetidas() {
   tbody.innerHTML = '';
   const entries = Object.values(allData).filter(d => d.estado === 'repeated');
   const filtered = filterUser === 'all' ? entries : entries.filter(d => d.usuario === filterUser);
-  filtered.sort((a,b) => a.numero - b.numero).forEach(d => {
+  filtered.sort((a,b) => (a.code || '').localeCompare(b.code || '')).forEach(d => {
     const userDisplay = d.usuario.split('@')[0];
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>#${d.numero}</strong></td><td>${userDisplay}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
+    tr.innerHTML = `<td><strong>${d.code}</strong></td><td>${userDisplay}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
     tbody.appendChild(tr);
   });
-  // WhatsApp message
   if (filtered.length > 0) {
     const userDisplay = filterUser === 'all' ? 'la familia' : filterUser.split('@')[0];
-    const nums = filtered.map(d => `#${d.numero}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
-    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${userDisplay}*\n\n${nums}\n\n¿Alguien las necesita? 🔁`;
+    const codes = filtered.map(d => `${d.code}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
+    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${userDisplay}*\n\n${codes}\n\n¿Alguien las necesita? 🔁`;
     document.getElementById('wa-rep-msg').textContent = msg;
     document.getElementById('whatsapp-rep').style.display = 'block';
   }
@@ -996,33 +970,31 @@ function renderMatches() {
   const container = document.getElementById('matches-list');
   container.innerHTML = '';
   const matches = [];
-  // For each pair of users, find where A has repeated and B needs it
   for (let i = 0; i < CONFIG.FAMILY_MEMBERS.length; i++) {
     for (let j = 0; j < CONFIG.FAMILY_MEMBERS.length; j++) {
       if (i === j) continue;
       const userA = CONFIG.FAMILY_MEMBERS[i];
       const userB = CONFIG.FAMILY_MEMBERS[j];
       const canGive = [];
-      for (const num in catalogoData) {
-        const n = parseInt(num);
-        const a = getUserStatus(userA, n);
-        const b = getUserStatus(userB, n);
-        if (a.estado === 'repeated' && b.estado === 'missing') canGive.push(n);
+      for (const code in catalogoData) {
+        const a = getUserStatus(userA, code);
+        const b = getUserStatus(userB, code);
+        if (a.estado === 'repeated' && b.estado === 'missing') canGive.push(code);
       }
       if (canGive.length > 0) matches.push({ from: userA, to: userB, stickers: canGive });
     }
   }
   if (matches.length === 0) {
-    container.innerHTML = `<p style="color:var(--muted);font-size:14px">No hay coincidencias detectadas todavía. Registrá más figuritas.</p>`;
+    container.innerHTML = `<p style="color:var(--muted);font-size:14px">No hay coincidencias detectadas todavía.</p>`;
     return;
   }
   matches.forEach(m => {
     const div = document.createElement('div');
     div.className = 'match-card';
-    const preview = m.stickers.slice(0,8).map(n=>`#${n}`).join(', ') + (m.stickers.length > 8 ? ` +${m.stickers.length-8}` : '');
+    const preview = m.stickers.slice(0,8).join(', ') + (m.stickers.length > 8 ? ` +${m.stickers.length-8}` : '');
     div.innerHTML = `
       <div class="match-info">
-        <div class="match-title">🎯 <strong>${m.from}</strong> puede darle a <strong>${m.to}</strong></div>
+        <div class="match-title">🎯 <strong>${m.from.split('@')[0]}</strong> puede darle a <strong>${m.to.split('@')[0]}</strong></div>
         <div class="match-nums">${m.stickers.length} figurita${m.stickers.length>1?'s':''}: ${preview}</div>
       </div>
       <button class="btn-primary" style="font-size:12px;padding:8px 12px" onclick='prefillTrade("${m.from}","${m.to}","${m.stickers.join(',')}")'>Registrar</button>
@@ -1087,29 +1059,29 @@ function renderTrades() {
 function renderFeria() {
   const user = selectedFeriaUser || CONFIG.FAMILY_MEMBERS[0];
   const missing = [], repeated = [];
-  for (const num in catalogoData) {
-    const n = parseInt(num);
-    const s = getUserStatus(user, n);
-    if (s.estado === 'missing') missing.push(n);
-    else if (s.estado === 'repeated') repeated.push(n);
+  for (const code in catalogoData) {
+    const s = getUserStatus(user, code);
+    if (s.estado === 'missing') missing.push(code);
+    else if (s.estado === 'repeated') repeated.push(code);
   }
   const missCont = document.getElementById('feria-missing');
   const repCont = document.getElementById('feria-repeated');
   missCont.innerHTML = '';
   repCont.innerHTML = '';
-  missing.slice(0, 100).forEach(n => {
+  missing.slice(0, 100).forEach(code => {
     const chip = document.createElement('span');
     chip.className = 'feria-chip missing';
-    chip.textContent = n;
+    chip.textContent = code;
     missCont.appendChild(chip);
   });
-  repeated.forEach(n => {
+  repeated.forEach(code => {
     const chip = document.createElement('span');
     chip.className = 'feria-chip repeated';
-    chip.textContent = n;
+    chip.textContent = code;
     repCont.appendChild(chip);
   });
-  const wa = `⚽ *${user} — Lista de feria FIFA 2026*\n\n❌ *Me faltan:* ${missing.slice(0,40).join(', ')}${missing.length>40?`... (+${missing.length-40})`:''}${repeated.length>0?`\n\n🔁 *Tengo repetidas:* ${repeated.map(n=>`#${n}`).join(', ')}`:''}`;
+  const userDisplay = user.split('@')[0];
+  const wa = `⚽ *${userDisplay} — Lista de feria FIFA 2026*\n\n❌ *Me faltan:* ${missing.slice(0,40).join(', ')}${missing.length>40?`... (+${missing.length-40})`:''}${repeated.length>0?`\n\n🔁 *Tengo repetidas:* ${repeated.join(', ')}`:''}`;
   document.getElementById('wa-feria-msg').textContent = wa;
 }
 
@@ -1128,9 +1100,8 @@ function renderMemberStats() {
   const totalStickers = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
   CONFIG.FAMILY_MEMBERS.forEach(user => {
     let owned = 0, rep = 0, miss = 0;
-    for (const num in catalogoData) {
-      const n = parseInt(num);
-      const s = getUserStatus(user, n);
+    for (const code in catalogoData) {
+      const s = getUserStatus(user, code);
       if (s.estado === 'owned') owned++;
       else if (s.estado === 'repeated') { owned++; rep++; }
       else miss++;
@@ -1154,9 +1125,8 @@ function renderMemberStats() {
   const fs = document.getElementById('full-stats');
   let totalOwned = 0, totalRep = 0;
   const totalSticks = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
-  for (const num in catalogoData) {
-    const n = parseInt(num);
-    const s = getFamilyStatus(n);
+  for (const code in catalogoData) {
+    const s = getFamilyStatus(code);
     if (s === 'owned' || s === 'repeated') totalOwned++;
     if (s === 'repeated') totalRep++;
   }
