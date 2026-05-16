@@ -722,24 +722,40 @@ async function loadData() {
     const catRows = catResp.values || [];
     console.log(`Encontradas ${catRows.length} filas en Stickers`);
     
-    catRows.slice(1).forEach((row, idx) => {
-      if (!row || !row[3]) return;
-      try {
-        const num = parseInt(row[3]);
-        if (isNaN(num)) return;
-        catalogoData[num] = {
-          numero: num,
-          code: row[0] || '',
-          seleccion: row[1] || 'FIFA',
-          country_code: row[2] || '',
-          descripcion: row[4] || `Figurita #${num}`,
-          type: row[5] || '',
-          categoria: row[6] || 'jugador',
-          is_official: row[7] || 'Yes',
-          created_at: row[8] || ''
-        };
-      } catch(e) {}
+    // Log primeras 5 filas para debug
+    console.log('Primeras 5 filas de Stickers:');
+    catRows.slice(0, 5).forEach((row, i) => {
+      console.log(`Fila ${i}:`, row);
     });
+    
+    let validCount = 0, invalidCount = 0;
+    catRows.slice(1).forEach((row, idx) => {
+      if (!row) return;
+      const num = row[3] ? parseInt(row[3]) : NaN;
+      
+      if (isNaN(num)) {
+        invalidCount++;
+        if (invalidCount <= 3) {
+          console.warn(`Fila ${idx+1}: número inválido:`, row[3], '| row completa:', row);
+        }
+        return;
+      }
+      
+      validCount++;
+      catalogoData[num] = {
+        numero: num,
+        code: row[0] || '',
+        seleccion: row[1] || 'FIFA',
+        country_code: row[2] || '',
+        descripcion: row[4] || `Figurita #${num}`,
+        type: row[5] || '',
+        categoria: row[6] || 'jugador',
+        is_official: row[7] || 'Yes',
+        created_at: row[8] || ''
+      };
+    });
+    
+    console.log(`✅ ${validCount} figuritas cargadas | ${invalidCount} filas ignoradas (sin número válido)`);
     
     if (Object.keys(catalogoData).length === 0) {
       document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas. Verificá la hoja Stickers.</div>`;
@@ -747,7 +763,6 @@ async function loadData() {
       return;
     }
     
-    console.log(`✅ ${Object.keys(catalogoData).length} figuritas cargadas`);
     CONFIG.TOTAL_STICKERS = Math.max(...Object.keys(catalogoData).map(Number));
 
     // Load user state data from UserData sheet (si existe)
