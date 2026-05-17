@@ -835,8 +835,13 @@ function populateTeamFilters() {
     }
   });
   
-  // Sort by team name and create options
-  const sortedTeams = Object.keys(teams).sort();
+  // Sort by country code
+  const sortedTeams = Object.keys(teams).sort((a, b) => {
+    const codeA = teams[a] || '';
+    const codeB = teams[b] || '';
+    return codeA.localeCompare(codeB);
+  });
+  
   const sel = document.getElementById('filter-team');
   sel.innerHTML = '<option value="all">Todos los equipos</option>';
   
