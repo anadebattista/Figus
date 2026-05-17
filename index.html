@@ -717,17 +717,15 @@ async function loadData() {
     const catRows = catResp.values || [];
     console.log(`Encontradas ${catRows.length} filas en Stickers`);
     
-    let validCount = 0, invalidCount = 0;
+    let validCount = 0;
     catRows.slice(1).forEach((row, idx) => {
-      if (!row || !row[0]) return; // code is at index 0
-      
-      const code = row[0]; // Use CODE as unique identifier
-      const num = parseInt(row[3]) || 0; // number for display (1-20 per country)
-      
+      if (!row || !row[0]) return;
+      const code = row[0];
+      const num = parseInt(row[3]) || 0;
       validCount++;
       catalogoData[code] = {
         code: code,
-        numero: num, // This is for display only
+        numero: num,
         seleccion: row[1] || 'FIFA',
         country_code: row[2] || '',
         descripcion: row[4] || `${row[1]} #${num}`,
@@ -738,31 +736,35 @@ async function loadData() {
       };
     });
     
-    console.log(`✅ ${validCount} figuritas cargadas`);
+    console.log(`✅ ${validCount} figuritas cargadas del catálogo`);
     
-    if (Object.keys(catalogoData).length === 0) {
-      document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas. Verificá la hoja Stickers.</div>`;
+    if (validCount === 0) {
+      document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas.</div>`;
       setSyncing(false);
       return;
     }
     
-    CONFIG.TOTAL_STICKERS = Object.keys(catalogoData).length;
+    CONFIG.TOTAL_STICKERS = validCount;
 
     // Load user state data
-    console.log('Cargando datos de usuarios...');
+    console.log('Cargando datos de usuarios desde UserData...');
     const resp = await sheetsGet('UserData!A:D');
     allData = {};
     const rows = resp.values || [];
-    rows.slice(1).forEach(row => {
+    console.log(`UserData tiene ${rows.length} filas (incluyendo encabezado)`);
+    
+    rows.slice(1).forEach((row, idx) => {
       if (!row || !row[0] || !row[1]) return;
-      const code = row[0]; // code identifier
+      const code = row[0];
       const user = row[1];
       const estado = row[2] || 'missing';
       const qty = parseInt(row[3]) || 0;
       const key = `${user}|${code}`;
       allData[key] = { code, usuario: user, estado, cantidad_rep: qty };
+      if (idx < 3) console.log(`UserData fila ${idx+1}: ${code} | ${user} | ${estado} | qty=${qty}`);
     });
     console.log(`✅ ${Object.keys(allData).length} registros de usuario cargados`);
+    console.log('Muestra de allData:', Object.keys(allData).slice(0, 5));
 
     // Load trades
     console.log('Cargando intercambios...');
@@ -851,6 +853,7 @@ function renderGrid() {
   const grid = document.getElementById('sticker-grid');
   grid.innerHTML = '';
   
+  let rendered = 0;
   for (const code in catalogoData) {
     const catalogo = catalogoData[code];
     const teamName = catalogo.seleccion || 'FIFA';
@@ -859,27 +862,42 @@ function renderGrid() {
     if (filterTeam !== 'all' && teamName !== filterTeam) continue;
     
     let estado, qty = 0;
+    const actualUser = filterUser === 'all' ? currentUser : filterUser;
+    const userStatus = getUserStatus(actualUser, code);
+    
     if (filterUser === 'all') {
+      // Show family status (first one found)
       estado = getFamilyStatus(code);
+      // Count total repeated
       CONFIG.FAMILY_MEMBERS.forEach(m => {
         const s = getUserStatus(m, code);
         if (s.estado === 'repeated') qty += Math.max(1, s.cantidad_rep);
       });
     } else {
-      const s = getUserStatus(filterUser, code);
-      estado = s.estado;
-      qty = s.cantidad_rep;
+      // Show specific user status
+      estado = userStatus.estado;
+      qty = userStatus.cantidad_rep || 0;
     }
+    
     if (filterStatus !== 'all' && estado !== filterStatus) continue;
     
     const cell = document.createElement('div');
     cell.className = `sticker-cell ${estado}`;
     cell.title = `${code} — ${catalogo.descripcion} (${teamName})`;
-    cell.innerHTML = `<span class="num">${catalogo.numero || code}</span>${estado === 'repeated' && qty > 0 ? `<span class="qty">x${qty}</span>` : ''}`;
-    cell.onclick = () => openModal(code, filterUser === 'all' ? currentUser : filterUser);
+    
+    // Show number (1-20) and quantity if repeated
+    const displayNum = catalogo.numero || code;
+    const qtyDisplay = (estado === 'repeated' && qty > 0) ? `<span class="qty">x${qty}</span>` : '';
+    cell.innerHTML = `<span class="num">${displayNum}</span>${qtyDisplay}`;
+    
+    cell.onclick = () => openModal(code, actualUser);
     grid.appendChild(cell);
+    rendered++;
   }
+  
+  console.log(`Grid renderizado: ${rendered} figuritas mostradas (usuario activo: ${currentUser})`);
 }
+
 
 // ============================================================
 // MODAL
