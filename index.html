@@ -375,7 +375,7 @@ const CONFIG = {
       </div>
 
       <div class="controls">
-        <input class="search-box" id="search-input" type="text" placeholder="Buscar por número o descripción..." oninput="renderGrid()">
+        <input class="search-box" id="search-input" type="text" placeholder="Buscar por código o descripción..." oninput="renderGrid()">
         <select class="filter-select" id="filter-team" onchange="renderGrid()">
           <option value="all">Todos los equipos</option>
         </select>
@@ -384,9 +384,6 @@ const CONFIG = {
           <option value="missing">Faltan</option>
           <option value="owned">Pegadas</option>
           <option value="repeated">Repetidas</option>
-        </select>
-        <select class="filter-select" id="filter-user" onchange="renderGrid()">
-          <option value="all">Todos</option>
         </select>
         <button class="btn-sm" onclick="loadData()" style="padding:8px 14px;font-size:13px">↻ Actualizar</button>
       </div>
@@ -447,8 +444,7 @@ const CONFIG = {
     <!-- ===== FERIA ===== -->
     <div id="tab-feria" class="section">
       <div style="margin-bottom:16px">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Seleccioná un integrante para ver su lista de feria</p>
-        <div class="user-selector" id="feria-user-selector"></div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Lista rápida de feria para intercambios presenciales</p>
       </div>
       <div class="feria-grid">
         <div class="feria-col">
@@ -485,9 +481,10 @@ const CONFIG = {
             <p>El Sheet "figus" ya tiene la hoja <strong>Stickers</strong> con el catálogo completo.<br><br>
             <strong>Columnas de Stickers:</strong><br>
             <code>A: code</code> · <code>B: country</code> · <code>C: country_code</code> · <code>D: number</code> · <code>E: description</code> · <code>F: type</code> · <code>G: category</code> · <code>H: is_official</code> · <code>I: created_at</code><br><br>
-            Si querés agregar hojas nuevas para registrar el estado por usuario, crealas con estos encabezados:<br><br>
-            <strong>UserData:</strong> <code>numero | usuario | estado | cantidad_rep</code><br>
-            <strong>Intercambios:</strong> <code>fecha | de | para | da | recibe | notas</code></p>
+            La app usa el <code>code</code> como identificador único de cada figurita.<br><br>
+            <strong>Album (estado del álbum familiar):</strong> <code>code | estado | cantidad_rep</code><br>
+            Estados válidos: <code>missing | owned | repeated</code><br><br>
+            <strong>Intercambios (historial):</strong> <code>fecha | de | para | da | recibe | notas</code></p>
           </div>
         </div>
         <div class="setup-step">
@@ -736,7 +733,7 @@ async function loadData() {
       };
     });
     
-    console.log(`✅ ${validCount} figuritas cargadas del catálogo`);
+    console.log(`✅ ${validCount} figuritas en el catálogo`);
     
     if (validCount === 0) {
       document.getElementById('config-status').innerHTML = `<div style="color:#fca5a5">⚠️ No se encontraron figuritas.</div>`;
@@ -746,25 +743,22 @@ async function loadData() {
     
     CONFIG.TOTAL_STICKERS = validCount;
 
-    // Load user state data
-    console.log('Cargando datos de usuarios desde UserData...');
-    const resp = await sheetsGet('UserData!A:D');
-    allData = {};
+    // Load album state - SINGLE FAMILY ALBUM (not per-user)
+    console.log('Cargando estado del álbum familiar...');
+    const resp = await sheetsGet('Album!A:C');
+    allData = {}; // Now: { code: {code, estado, cantidad_rep} }
     const rows = resp.values || [];
-    console.log(`UserData tiene ${rows.length} filas (incluyendo encabezado)`);
+    console.log(`Album tiene ${rows.length} filas (incluyendo encabezado)`);
     
     rows.slice(1).forEach((row, idx) => {
-      if (!row || !row[0] || !row[1]) return;
+      if (!row || !row[0]) return;
       const code = row[0];
-      const user = row[1];
-      const estado = row[2] || 'missing';
-      const qty = parseInt(row[3]) || 0;
-      const key = `${user}|${code}`;
-      allData[key] = { code, usuario: user, estado, cantidad_rep: qty };
-      if (idx < 3) console.log(`UserData fila ${idx+1}: ${code} | ${user} | ${estado} | qty=${qty}`);
+      const estado = row[1] || 'missing';
+      const qty = parseInt(row[2]) || 0;
+      allData[code] = { code, estado, cantidad_rep: qty };
+      if (idx < 3) console.log(`Album fila ${idx+1}: ${code} | ${estado} | qty=${qty}`);
     });
-    console.log(`✅ ${Object.keys(allData).length} registros de usuario cargados`);
-    console.log('Muestra de allData:', Object.keys(allData).slice(0, 5));
+    console.log(`✅ ${Object.keys(allData).length} figuritas en el álbum`);
 
     // Load trades
     console.log('Cargando intercambios...');
@@ -798,20 +792,10 @@ async function loadData() {
 }
 
 // ============================================================
-// STICKER STATUS HELPERS
+// STICKER STATUS HELPERS - SINGLE FAMILY ALBUM
 // ============================================================
-function getUserStatus(user, code) {
-  const key = `${user}|${code}`;
-  return allData[key] || { code, usuario: user, estado: 'missing', cantidad_rep: 0 };
-}
-
-// Family-level: owned = at least one user has it owned or repeated
-function getFamilyStatus(code) {
-  for (const m of CONFIG.FAMILY_MEMBERS) {
-    const s = getUserStatus(m, code);
-    if (s.estado === 'owned' || s.estado === 'repeated') return s.estado;
-  }
-  return 'missing';
+function getStickerStatus(code) {
+  return allData[code] || { code, estado: 'missing', cantidad_rep: 0 };
 }
 
 // ============================================================
@@ -820,12 +804,14 @@ function getFamilyStatus(code) {
 function updateStats() {
   const totalUnique = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
   let owned = 0, rep = 0, miss = 0;
+  
   for (const code in catalogoData) {
-    const s = getFamilyStatus(code);
-    if (s === 'owned') owned++;
-    else if (s === 'repeated') { owned++; rep++; }
+    const status = getStickerStatus(code);
+    if (status.estado === 'owned') owned++;
+    else if (status.estado === 'repeated') { owned++; rep++; }
     else miss++;
   }
+  
   document.getElementById('s-owned').textContent = owned;
   document.getElementById('s-rep').textContent = rep;
   document.getElementById('s-miss').textContent = miss;
@@ -848,69 +834,55 @@ function populateTeamFilters() {
 function renderGrid() {
   const search = document.getElementById('search-input').value.trim();
   const filterStatus = document.getElementById('filter-status').value;
-  const filterUser = document.getElementById('filter-user').value;
   const filterTeam = document.getElementById('filter-team').value;
   const grid = document.getElementById('sticker-grid');
   grid.innerHTML = '';
   
-  let rendered = 0;
   for (const code in catalogoData) {
     const catalogo = catalogoData[code];
     const teamName = catalogo.seleccion || 'FIFA';
     
+    // Search filter
     if (search && !code.toLowerCase().includes(search.toLowerCase()) && !catalogo.descripcion.toLowerCase().includes(search.toLowerCase())) continue;
+    
+    // Team filter
     if (filterTeam !== 'all' && teamName !== filterTeam) continue;
     
-    let estado, qty = 0;
-    const actualUser = filterUser === 'all' ? currentUser : filterUser;
-    const userStatus = getUserStatus(actualUser, code);
+    // Get album status for this code
+    const status = getStickerStatus(code);
+    const estado = status.estado;
+    const qty = status.cantidad_rep || 0;
     
-    if (filterUser === 'all') {
-      // Show family status (first one found)
-      estado = getFamilyStatus(code);
-      // Count total repeated
-      CONFIG.FAMILY_MEMBERS.forEach(m => {
-        const s = getUserStatus(m, code);
-        if (s.estado === 'repeated') qty += Math.max(1, s.cantidad_rep);
-      });
-    } else {
-      // Show specific user status
-      estado = userStatus.estado;
-      qty = userStatus.cantidad_rep || 0;
-    }
-    
+    // Status filter
     if (filterStatus !== 'all' && estado !== filterStatus) continue;
     
     const cell = document.createElement('div');
     cell.className = `sticker-cell ${estado}`;
     cell.title = `${code} — ${catalogo.descripcion} (${teamName})`;
     
-    // Show number (1-20) and quantity if repeated
-    const displayNum = catalogo.numero || code;
+    // SHOW CODE (not number)
     const qtyDisplay = (estado === 'repeated' && qty > 0) ? `<span class="qty">x${qty}</span>` : '';
-    cell.innerHTML = `<span class="num">${displayNum}</span>${qtyDisplay}`;
+    cell.innerHTML = `<span class="num">${code}</span>${qtyDisplay}`;
     
-    cell.onclick = () => openModal(code, actualUser);
+    cell.onclick = () => openModal(code);
     grid.appendChild(cell);
-    rendered++;
   }
-  
-  console.log(`Grid renderizado: ${rendered} figuritas mostradas (usuario activo: ${currentUser})`);
 }
 
 
 // ============================================================
 // MODAL
 // ============================================================
-function openModal(code, user) {
-  currentModalSticker = { code, user };
+function openModal(code) {
+  currentModalSticker = { code };
   const catalogo = catalogoData[code] || {};
   const displayName = catalogo.descripcion || `${code}`;
   const displayCountry = catalogo.seleccion || 'FIFA';
   const displayType = catalogo.type ? `${catalogo.type} • ` : '';
   document.getElementById('modal-title').textContent = `${code} — ${displayName}`;
-  document.getElementById('modal-sub').textContent = `${displayCountry} • ${displayType}${catalogo.categoria || 'jugador'} · Usuario: ${user}`;
-  const current = getUserStatus(user, code);
+  document.getElementById('modal-sub').textContent = `${displayCountry} • ${displayType}${catalogo.categoria || 'jugador'}`;
+  
+  const current = getStickerStatus(code);
   ['missing','owned','repeated'].forEach(s => {
     document.getElementById(`btn-${s}`).classList.toggle('active-state', current.estado === s);
   });
@@ -923,34 +895,33 @@ function closeModalDirect() { document.getElementById('sticker-modal').style.dis
 
 async function setStatus(status) {
   if (!currentModalSticker || saving) return;
-  const { code, user } = currentModalSticker;
+  const { code } = currentModalSticker;
   ['missing','owned','repeated'].forEach(s => document.getElementById(`btn-${s}`).classList.remove('active-state'));
   document.getElementById(`btn-${status}`).classList.add('active-state');
   document.getElementById('qty-row').style.display = status === 'repeated' ? 'flex' : 'none';
   const qty = status === 'repeated' ? (parseInt(document.getElementById('qty-input').value) || 1) : 0;
 
   // Update local
-  const key = `${user}|${code}`;
-  allData[key] = { code, usuario: user, estado: status, cantidad_rep: qty };
+  allData[code] = { code, estado: status, cantidad_rep: qty };
 
   // Save to sheet
   saving = true;
   setSyncing(true);
   try {
-    const resp = await sheetsGet('UserData!A:D');
+    const resp = await sheetsGet('Album!A:C');
     const rows = resp.values || [];
     let rowIdx = -1;
-    rows.forEach((r, i) => { if (r[0] === code && r[1] === user) rowIdx = i; });
+    rows.forEach((r, i) => { if (r[0] === code) rowIdx = i; });
     if (rowIdx >= 0) {
-      const range = `UserData!A${rowIdx+1}:D${rowIdx+1}`;
-      await sheetsBatchUpdate([{ range, values: [[code, user, status, qty]] }]);
+      const range = `Album!A${rowIdx+1}:C${rowIdx+1}`;
+      await sheetsBatchUpdate([{ range, values: [[code, status, qty]] }]);
     } else {
-      await sheetsAppend('UserData!A:D', [[code, user, status, qty]]);
+      await sheetsAppend('Album!A:C', [[code, status, qty]]);
     }
     updateStats();
     renderGrid();
     renderRepetidas();
-    renderFeria();
+    renderMatches();
     renderMemberStats();
   } catch(e) { console.error(e); }
   saving = false;
@@ -961,21 +932,19 @@ async function setStatus(status) {
 // REPETIDAS
 // ============================================================
 function renderRepetidas() {
-  const filterUser = document.getElementById('rep-user-filter').value;
   const tbody = document.getElementById('rep-table-body');
   tbody.innerHTML = '';
-  const entries = Object.values(allData).filter(d => d.estado === 'repeated');
-  const filtered = filterUser === 'all' ? entries : entries.filter(d => d.usuario === filterUser);
-  filtered.sort((a,b) => (a.code || '').localeCompare(b.code || '')).forEach(d => {
-    const userDisplay = d.usuario.split('@')[0];
+  const entries = Object.values(allData).filter(d => d.estado === 'repeated').sort((a,b) => (a.code || '').localeCompare(b.code || ''));
+  
+  entries.forEach(d => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${d.code}</strong></td><td>${userDisplay}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
+    tr.innerHTML = `<td><strong>${d.code}</strong></td><td>${catalogoData[d.code]?.descripcion || d.code}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
     tbody.appendChild(tr);
   });
-  if (filtered.length > 0) {
-    const userDisplay = filterUser === 'all' ? 'la familia' : filterUser.split('@')[0];
-    const codes = filtered.map(d => `${d.code}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
-    const msg = `⚽ *Álbum FIFA 2026 — Repetidas de ${userDisplay}*\n\n${codes}\n\n¿Alguien las necesita? 🔁`;
+  
+  if (entries.length > 0) {
+    const codes = entries.map(d => `${d.code}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
+    const msg = `⚽ *Álbum FIFA 2026 — Figuritas Repetidas*\n\n${codes}\n\n¿Alguien las necesita? 🔁`;
     document.getElementById('wa-rep-msg').textContent = msg;
     document.getElementById('whatsapp-rep').style.display = 'block';
   }
@@ -985,40 +954,33 @@ function renderRepetidas() {
 // MATCHES (coincidencias automáticas)
 // ============================================================
 function renderMatches() {
+  // Single album: no matching needed, show summary of what's missing
   const container = document.getElementById('matches-list');
   container.innerHTML = '';
-  const matches = [];
-  for (let i = 0; i < CONFIG.FAMILY_MEMBERS.length; i++) {
-    for (let j = 0; j < CONFIG.FAMILY_MEMBERS.length; j++) {
-      if (i === j) continue;
-      const userA = CONFIG.FAMILY_MEMBERS[i];
-      const userB = CONFIG.FAMILY_MEMBERS[j];
-      const canGive = [];
-      for (const code in catalogoData) {
-        const a = getUserStatus(userA, code);
-        const b = getUserStatus(userB, code);
-        if (a.estado === 'repeated' && b.estado === 'missing') canGive.push(code);
-      }
-      if (canGive.length > 0) matches.push({ from: userA, to: userB, stickers: canGive });
-    }
-  }
-  if (matches.length === 0) {
-    container.innerHTML = `<p style="color:var(--muted);font-size:14px">No hay coincidencias detectadas todavía.</p>`;
+  
+  const missing = Object.entries(catalogoData)
+    .filter(([code]) => {
+      const s = getStickerStatus(code);
+      return s.estado === 'missing';
+    })
+    .map(([code]) => code);
+  
+  if (missing.length === 0) {
+    container.innerHTML = `<p style="color:var(--green);font-size:14px">🎉 ¡Álbum completado! No faltan figuritas.</p>`;
     return;
   }
-  matches.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'match-card';
-    const preview = m.stickers.slice(0,8).join(', ') + (m.stickers.length > 8 ? ` +${m.stickers.length-8}` : '');
-    div.innerHTML = `
-      <div class="match-info">
-        <div class="match-title">🎯 <strong>${m.from.split('@')[0]}</strong> puede darle a <strong>${m.to.split('@')[0]}</strong></div>
-        <div class="match-nums">${m.stickers.length} figurita${m.stickers.length>1?'s':''}: ${preview}</div>
-      </div>
-      <button class="btn-primary" style="font-size:12px;padding:8px 12px" onclick='prefillTrade("${m.from}","${m.to}","${m.stickers.join(',')}")'>Registrar</button>
-    `;
-    container.appendChild(div);
-  });
+  
+  const div = document.createElement('div');
+  div.style.background = 'rgba(239,68,68,0.1)';
+  div.style.border = '1px solid rgba(239,68,68,0.3)';
+  div.style.borderRadius = 'var(--radius)';
+  div.style.padding = '16px';
+  div.innerHTML = `
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">❌ Faltantes del álbum</div>
+    <div style="font-size:12px;color:var(--muted)">${missing.length} figuritas faltando</div>
+    <div style="font-size:13px;color:var(--text);margin-top:10px;max-height:200px;overflow-y:auto">${missing.join(', ')}</div>
+  `;
+  container.appendChild(div);
 }
 
 function prefillTrade(from, to, stickers) {
@@ -1075,83 +1037,65 @@ function renderTrades() {
 // FERIA
 // ============================================================
 function renderFeria() {
-  const user = selectedFeriaUser || CONFIG.FAMILY_MEMBERS[0];
+  // Single album: show all missing and repeated (not per-user)
   const missing = [], repeated = [];
   for (const code in catalogoData) {
-    const s = getUserStatus(user, code);
+    const s = getStickerStatus(code);
     if (s.estado === 'missing') missing.push(code);
     else if (s.estado === 'repeated') repeated.push(code);
   }
+  
   const missCont = document.getElementById('feria-missing');
   const repCont = document.getElementById('feria-repeated');
   missCont.innerHTML = '';
   repCont.innerHTML = '';
-  missing.slice(0, 100).forEach(code => {
+  
+  missing.forEach(code => {
     const chip = document.createElement('span');
     chip.className = 'feria-chip missing';
     chip.textContent = code;
     missCont.appendChild(chip);
   });
+  
   repeated.forEach(code => {
     const chip = document.createElement('span');
     chip.className = 'feria-chip repeated';
     chip.textContent = code;
     repCont.appendChild(chip);
   });
-  const userDisplay = user.split('@')[0];
-  const wa = `⚽ *${userDisplay} — Lista de feria FIFA 2026*\n\n❌ *Me faltan:* ${missing.slice(0,40).join(', ')}${missing.length>40?`... (+${missing.length-40})`:''}${repeated.length>0?`\n\n🔁 *Tengo repetidas:* ${repeated.join(', ')}`:''}`;
+  
+  const wa = `⚽ *Álbum FIFA 2026 — Lista de Feria*\n\n❌ *Me faltan (${missing.length}):* ${missing.slice(0,40).join(', ')}${missing.length>40?`... (+${missing.length-40})`:''}${repeated.length>0?`\n\n🔁 *Tengo repetidas (${repeated.length}):* ${repeated.join(', ')}`:''}`;
   document.getElementById('wa-feria-msg').textContent = wa;
 }
 
-function setFeriaUser(user) {
-  selectedFeriaUser = user;
-  document.querySelectorAll('.user-pill').forEach(p => p.classList.toggle('active', p.textContent === user));
-  renderFeria();
-}
+// Feria uses single album - no need to select user
 
 // ============================================================
 // MEMBER STATS
 // ============================================================
 function renderMemberStats() {
+  // Single album: just show overall progress
   const container = document.getElementById('member-stats');
-  container.innerHTML = '';
-  const totalStickers = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
-  CONFIG.FAMILY_MEMBERS.forEach(user => {
-    let owned = 0, rep = 0, miss = 0;
-    for (const code in catalogoData) {
-      const s = getUserStatus(user, code);
-      if (s.estado === 'owned') owned++;
-      else if (s.estado === 'repeated') { owned++; rep++; }
-      else miss++;
-    }
-    const pct = totalStickers > 0 ? Math.round(owned / totalStickers * 100) : 0;
-    const userDisplay = user.split('@')[0];
-    const div = document.createElement('div');
-    div.className = 'progress-section';
-    div.innerHTML = `
-      <div class="progress-title">
-        <span>👤 ${userDisplay}</span>
-        <span style="color:var(--accent2)">${owned} / ${totalStickers}</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="progress-sub">${pct}% completado · ${rep} repetidas · ${miss} faltantes</div>
-    `;
-    container.appendChild(div);
-  });
-
-  // Full stats
   const fs = document.getElementById('full-stats');
-  let totalOwned = 0, totalRep = 0;
-  const totalSticks = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
+  
+  container.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:16px">El álbum es único para toda la familia. Las estadísticas se actualizan en tiempo real con los cambios realizados por los 4 usuarios.</p>';
+  
+  let totalOwned = 0, totalRep = 0, totalMissing = 0;
+  const totalSticks = Object.keys(catalogoData).length;
+  
   for (const code in catalogoData) {
-    const s = getFamilyStatus(code);
-    if (s === 'owned' || s === 'repeated') totalOwned++;
-    if (s === 'repeated') totalRep++;
+    const s = getStickerStatus(code);
+    if (s.estado === 'owned') totalOwned++;
+    else if (s.estado === 'repeated') totalOwned++;
+    else totalMissing++;
   }
+  
+  totalRep = Object.values(allData).filter(d => d.estado === 'repeated').reduce((sum, d) => sum + (d.cantidad_rep || 1), 0);
+  
   fs.innerHTML = `
-    <div class="stat-card green"><div class="stat-num">${totalOwned}</div><div class="stat-label">Pegadas (familia)</div></div>
-    <div class="stat-card red"><div class="stat-num">${totalSticks - totalOwned}</div><div class="stat-label">Faltan</div></div>
-    <div class="stat-card yellow"><div class="stat-num">${Object.values(allData).filter(d=>d.estado==='repeated').length}</div><div class="stat-label">Repetidas totales</div></div>
+    <div class="stat-card green"><div class="stat-num">${totalOwned}</div><div class="stat-label">Pegadas</div></div>
+    <div class="stat-card red"><div class="stat-num">${totalMissing}</div><div class="stat-label">Faltan</div></div>
+    <div class="stat-card yellow"><div class="stat-num">${totalRep}</div><div class="stat-label">Repetidas</div></div>
     <div class="stat-card purple"><div class="stat-num">${tradesData.length}</div><div class="stat-label">Intercambios</div></div>
     <div class="stat-card blue"><div class="stat-num">${totalSticks > 0 ? Math.round(totalOwned/totalSticks*100) : 0}%</div><div class="stat-label">Completado</div></div>
   `;
@@ -1181,38 +1125,7 @@ function showTab(name) {
 }
 
 function populateUserSelects() {
-  // Filter user in album
-  const fu = document.getElementById('filter-user');
-  fu.innerHTML = '<option value="all">Familia completa</option>';
-  CONFIG.FAMILY_MEMBERS.forEach(m => { fu.innerHTML += `<option value="${m}">${m.split('@')[0]}</option>`; });
-
-  // Repetidas filter
-  const ru = document.getElementById('rep-user-filter');
-  ru.innerHTML = '<option value="all">Todos los usuarios</option>';
-  CONFIG.FAMILY_MEMBERS.forEach(m => { ru.innerHTML += `<option value="${m}">${m.split('@')[0]}</option>`; });
-
-  // Trade selects
-  const tf = document.getElementById('trade-from');
-  const tt = document.getElementById('trade-to');
-  tf.innerHTML = tt.innerHTML = '';
-  CONFIG.FAMILY_MEMBERS.forEach(m => {
-    const displayName = m.split('@')[0];
-    tf.innerHTML += `<option value="${m}">${displayName}</option>`;
-    tt.innerHTML += `<option value="${m}">${displayName}</option>`;
-  });
-  if (CONFIG.FAMILY_MEMBERS.length > 1) tt.selectedIndex = 1;
-
-  // Feria selector
-  const fs = document.getElementById('feria-user-selector');
-  fs.innerHTML = '';
-  CONFIG.FAMILY_MEMBERS.forEach((m, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'user-pill' + (i === 0 ? ' active' : '');
-    btn.textContent = m.split('@')[0];
-    btn.onclick = () => setFeriaUser(m);
-    fs.appendChild(btn);
-  });
-  selectedFeriaUser = CONFIG.FAMILY_MEMBERS[0];
+  // No longer needed - single album for entire family
 }
 
 function updateConfigStatus() {
