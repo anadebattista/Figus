@@ -825,10 +825,26 @@ function updateStats() {
 // GRID RENDER
 // ============================================================
 function populateTeamFilters() {
-  const teams = [...new Set(Object.values(catalogoData).map(d => d.seleccion || d.country).filter(x => x))].sort();
+  // Get unique teams with their country codes
+  const teams = {};
+  Object.values(catalogoData).forEach(d => {
+    const teamName = d.seleccion || 'FIFA';
+    const countryCode = d.country_code || '';
+    if (!teams[teamName]) {
+      teams[teamName] = countryCode;
+    }
+  });
+  
+  // Sort by team name and create options
+  const sortedTeams = Object.keys(teams).sort();
   const sel = document.getElementById('filter-team');
   sel.innerHTML = '<option value="all">Todos los equipos</option>';
-  teams.forEach(t => { sel.innerHTML += `<option value="${t}">${t}</option>`; });
+  
+  sortedTeams.forEach(t => {
+    const code = teams[t];
+    const displayText = code ? `${code} ${t}` : t;
+    sel.innerHTML += `<option value="${t}">${displayText}</option>`;
+  });
 }
 
 function renderGrid() {
