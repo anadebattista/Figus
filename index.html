@@ -819,8 +819,8 @@ function getStickerStatus(code) {
 // STATS
 // ============================================================
 function updateStats() {
-  const totalUnique = Object.keys(catalogoData).length || CONFIG.TOTAL_STICKERS;
-  let owned = 0, rep = 0, miss = 0;
+  const totalUnique = 980; // Total de figuritas del álbum
+  let owned = 0, rep = 0;
   
   for (const code in catalogoData) {
     const status = getStickerStatus(code);
@@ -829,10 +829,10 @@ function updateStats() {
     } else if (status.estado === 'repeated') {
       owned++;
       rep++;
-    } else {
-      miss++;
     }
   }
+  
+  const miss = totalUnique - owned; // Faltan = Total - Pegadas
   
   document.getElementById('s-owned').textContent = owned;
   document.getElementById('s-rep').textContent = rep;
