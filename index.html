@@ -249,7 +249,36 @@
     padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
   }
 
-  /* FERIA MODE */
+  /* CONTEXT MENU */
+  #context-menu {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    z-index: 300;
+    display: none;
+    min-width: 200px;
+    padding: 4px 0;
+    backdrop-filter: blur(8px);
+  }
+  #context-menu.show { display: block; }
+  .context-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .context-item:last-child { border-bottom: none; }
+  .context-item:hover { background: var(--surface2); color: var(--accent2); }
+  .context-item.owned { color: var(--green); }
+  .context-item.repeated { color: var(--yellow); }
+  .context-item.missing { color: var(--muted); }
   .feria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .feria-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
   .feria-col h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
@@ -546,23 +575,11 @@ const CONFIG = {
   </div><!-- /main -->
 </div><!-- /app -->
 
-<!-- MODAL FIGURITA -->
-<div class="modal-overlay" id="sticker-modal" style="display:none" onclick="closeModal(event)">
-  <div class="modal">
-    <div class="modal-title" id="modal-title">Figurita #0</div>
-    <div class="modal-sub" id="modal-sub">¿Qué estado tiene?</div>
-    <div class="modal-actions">
-      <button class="btn-action missing-btn"  id="btn-missing"  onclick="setStatus('missing')">  ⬜ No la tengo</button>
-      <button class="btn-action owned-btn"    id="btn-owned"    onclick="setStatus('owned')">    ✅ La pegué</button>
-      <button class="btn-action repeated-btn" id="btn-repeated" onclick="setStatus('repeated')"> 🔁 La tengo repetida</button>
-    </div>
-    <div class="qty-row" id="qty-row" style="display:none">
-      <label>Cantidad repetidas:</label>
-      <input class="qty-input" id="qty-input" type="number" min="1" max="99" value="1">
-    </div>
-    <div style="height:12px"></div>
-    <button class="modal-close" onclick="closeModalDirect()">Cerrar</button>
-  </div>
+<!-- CONTEXT MENU -->
+<div id="context-menu">
+  <div class="context-item owned" onclick="quickSetStatus('owned')">✅ La pegué</div>
+  <div class="context-item repeated" onclick="quickSetStatus('repeated')">🔁 Repetida</div>
+  <div class="context-item missing" onclick="quickSetStatus('missing')">❌ No la tengo</div>
 </div>
 
 <!-- SCRIPTS -->
@@ -807,9 +824,14 @@ function updateStats() {
   
   for (const code in catalogoData) {
     const status = getStickerStatus(code);
-    if (status.estado === 'owned') owned++;
-    else if (status.estado === 'repeated') { owned++; rep++; }
-    else miss++;
+    if (status.estado === 'owned') {
+      owned++;
+    } else if (status.estado === 'repeated') {
+      owned++;
+      rep++;
+    } else {
+      miss++;
+    }
   }
   
   document.getElementById('s-owned').textContent = owned;
@@ -879,48 +901,59 @@ function renderGrid() {
     
     const cell = document.createElement('div');
     cell.className = `sticker-cell ${estado}`;
-    cell.title = `${code} — ${catalogo.descripcion} (${teamName})`;
+    cell.title = `${code} — ${catalogo.descripcion} (${teamName})\nClick derecho para cambiar estado`;
     
     // SHOW CODE (not number)
     const qtyDisplay = (estado === 'repeated' && qty > 0) ? `<span class="qty">x${qty}</span>` : '';
     cell.innerHTML = `<span class="num">${code}</span>${qtyDisplay}`;
     
-    cell.onclick = () => openModal(code);
+    // Right click context menu
+    cell.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showContextMenu(e, code, catalogo);
+    });
+    
     grid.appendChild(cell);
   }
 }
 
 
 // ============================================================
-// MODAL
+// CONTEXT MENU
 // ============================================================
-function openModal(code) {
-  currentModalSticker = { code };
-  const catalogo = catalogoData[code] || {};
-  const displayName = catalogo.descripcion || `${code}`;
-  const displayCountry = catalogo.seleccion || 'FIFA';
-  const displayType = catalogo.type ? `${catalogo.type} • ` : '';
-  document.getElementById('modal-title').textContent = `${code} — ${displayName}`;
-  document.getElementById('modal-sub').textContent = `${displayCountry} • ${displayType}${catalogo.categoria || 'jugador'}`;
-  
-  const current = getStickerStatus(code);
-  ['missing','owned','repeated'].forEach(s => {
-    document.getElementById(`btn-${s}`).classList.toggle('active-state', current.estado === s);
-  });
-  document.getElementById('qty-row').style.display = current.estado === 'repeated' ? 'flex' : 'none';
-  document.getElementById('qty-input').value = current.cantidad_rep || 1;
-  document.getElementById('sticker-modal').style.display = 'flex';
-}
-function closeModal(e) { if (e.target.id === 'sticker-modal') closeModalDirect(); }
-function closeModalDirect() { document.getElementById('sticker-modal').style.display = 'none'; currentModalSticker = null; }
+let currentContextCode = null;
 
-async function setStatus(status) {
-  if (!currentModalSticker || saving) return;
-  const { code } = currentModalSticker;
-  ['missing','owned','repeated'].forEach(s => document.getElementById(`btn-${s}`).classList.remove('active-state'));
-  document.getElementById(`btn-${status}`).classList.add('active-state');
-  document.getElementById('qty-row').style.display = status === 'repeated' ? 'flex' : 'none';
-  const qty = status === 'repeated' ? (parseInt(document.getElementById('qty-input').value) || 1) : 0;
+function showContextMenu(e, code, catalogo) {
+  currentContextCode = code;
+  const menu = document.getElementById('context-menu');
+  menu.classList.add('show');
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  
+  // Close menu when clicking elsewhere
+  document.addEventListener('click', closeContextMenu);
+}
+
+function closeContextMenu() {
+  const menu = document.getElementById('context-menu');
+  menu.classList.remove('show');
+  document.removeEventListener('click', closeContextMenu);
+}
+
+async function quickSetStatus(status) {
+  if (!currentContextCode || saving) return;
+  const code = currentContextCode;
+  closeContextMenu();
+  
+  // For repeated, ask for quantity
+  let qty = 1;
+  if (status === 'repeated') {
+    const current = getStickerStatus(code);
+    qty = current.cantidad_rep || 1;
+    const input = prompt('¿Cuántas repetidas?', qty);
+    if (input === null) return;
+    qty = parseInt(input) || 1;
+  }
 
   // Update local
   allData[code] = { code, estado: status, cantidad_rep: qty };
