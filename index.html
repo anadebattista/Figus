@@ -904,12 +904,16 @@ function renderGrid() {
     cell.title = `${code} — ${catalogo.descripcion} (${teamName})\nClick derecho para cambiar estado`;
     
     // SHOW CODE (not number)
-    const qtyDisplay = (estado === 'repeated' && qty > 0) ? `<span class="qty">x${qty}</span>` : '';
+    const qtyDisplay = (qty > 1) ? `<span class="qty">+${qty}</span>` : '';
     cell.innerHTML = `<span class="num">${code}</span>${qtyDisplay}`;
-    
+
+    // Left click: mark as owned / increment repeated
+    cell.addEventListener('click', () => clickSticker(code));
+
     // Right click context menu
     cell.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       showContextMenu(e, code, catalogo);
     });
     
@@ -917,6 +921,72 @@ function renderGrid() {
   }
 }
 
+
+// ============================================================
+// CLICK TO MARK / INCREMENT
+// ============================================================
+const pendingSaves = {};
+let saveTimer = null;
+
+function clickSticker(code) {
+  const current = getStickerStatus(code);
+  let newEstado, newQty;
+
+  if (current.estado === 'missing') {
+    newEstado = 'owned';
+    newQty = 1;
+  } else {
+    // owned(1) → repeated(2), repeated(N) → repeated(N+1)
+    newEstado = 'repeated';
+    newQty = (current.cantidad_rep || 1) + 1;
+  }
+
+  allData[code] = { code, estado: newEstado, cantidad_rep: newQty };
+  updateStats();
+  renderGrid();
+  renderRepetidas();
+  renderFeria();
+
+  pendingSaves[code] = { estado: newEstado, qty: newQty };
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushPendingSaves, 800);
+}
+
+async function flushPendingSaves() {
+  if (saving) { saveTimer = setTimeout(flushPendingSaves, 500); return; }
+  const toSave = { ...pendingSaves };
+  if (Object.keys(toSave).length === 0) return;
+  for (const k in toSave) delete pendingSaves[k];
+
+  saving = true;
+  setSyncing(true);
+  try {
+    const resp = await sheetsGet('Album!A:C');
+    const rows = resp.values || [];
+    const rowMap = {};
+    rows.forEach((r, i) => { if (r[0]) rowMap[r[0]] = i; });
+
+    const updates = [];
+    const appends = [];
+    for (const code in toSave) {
+      const { estado, qty } = toSave[code];
+      if (rowMap[code] !== undefined) {
+        updates.push({ range: `Album!A${rowMap[code]+1}:C${rowMap[code]+1}`, values: [[code, estado, qty]] });
+      } else {
+        appends.push([code, estado, qty]);
+      }
+    }
+
+    if (updates.length > 0) await sheetsBatchUpdate(updates);
+    for (const row of appends) await sheetsAppend('Album!A:C', [row]);
+
+    renderMatches();
+    renderMemberStats();
+  } catch(e) { console.error(e); }
+  saving = false;
+  setSyncing(false);
+  if (Object.keys(pendingSaves).length > 0) flushPendingSaves();
+}
 
 // ============================================================
 // CONTEXT MENU
