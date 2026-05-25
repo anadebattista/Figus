@@ -429,7 +429,7 @@ const CONFIG = {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>N°</th><th>Usuario</th><th>Cantidad</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Código</th><th>Figurita</th><th>Copias totales</th><th>Extras p/ cambio</th></tr></thead>
           <tbody id="rep-table-body"></tbody>
         </table>
       </div>
@@ -828,7 +828,8 @@ function updateStats() {
       owned++;
     } else if (status.estado === 'repeated') {
       owned++;
-      rep++;
+      // Sumar copias extra (qty=2 → 1 extra, qty=3 → 2 extras, etc.)
+      rep += Math.max(1, (status.cantidad_rep || 2) - 1);
     }
   }
   
@@ -880,8 +881,13 @@ function renderGrid() {
   const filterTeam = document.getElementById('filter-team').value;
   const grid = document.getElementById('sticker-grid');
   grid.innerHTML = '';
-  
-  for (const code in catalogoData) {
+
+  // Ordenar por número de figurita (numérico), no alfabético
+  const sortedCodes = Object.keys(catalogoData).sort((a, b) =>
+    (catalogoData[a].numero || 0) - (catalogoData[b].numero || 0)
+  );
+
+  for (const code of sortedCodes) {
     const catalogo = catalogoData[code];
     const teamName = catalogo.seleccion || 'FIFA';
     
@@ -1058,20 +1064,36 @@ async function quickSetStatus(status) {
 function renderRepetidas() {
   const tbody = document.getElementById('rep-table-body');
   tbody.innerHTML = '';
-  const entries = Object.values(allData).filter(d => d.estado === 'repeated').sort((a,b) => (a.code || '').localeCompare(b.code || ''));
-  
+
+  // Filtrar repetidas y ordenar por número de figurita (numérico)
+  const entries = Object.values(allData)
+    .filter(d => d.estado === 'repeated')
+    .sort((a, b) => (catalogoData[a.code]?.numero || 0) - (catalogoData[b.code]?.numero || 0));
+
   entries.forEach(d => {
+    const total = d.cantidad_rep || 2;
+    const extras = total - 1;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${d.code}</strong></td><td>${catalogoData[d.code]?.descripcion || d.code}</td><td>x${d.cantidad_rep || 1}</td><td><span class="badge repeated">Repetida</span></td>`;
+    tr.innerHTML = `
+      <td><strong>${d.code}</strong></td>
+      <td>${catalogoData[d.code]?.descripcion || d.code}</td>
+      <td><span style="font-weight:700;color:var(--yellow)">+${total}</span></td>
+      <td><span class="badge repeated">+${extras} para cambio</span></td>`;
     tbody.appendChild(tr);
   });
-  
-  if (entries.length > 0) {
-    const codes = entries.map(d => `${d.code}${d.cantidad_rep > 1 ? ` (x${d.cantidad_rep})` : ''}`).join(', ');
-    const msg = `⚽ *Álbum FIFA 2026 — Figuritas Repetidas*\n\n${codes}\n\n¿Alguien las necesita? 🔁`;
-    document.getElementById('wa-rep-msg').textContent = msg;
-    document.getElementById('whatsapp-rep').style.display = 'block';
+
+  if (entries.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="4" style="text-align:center;color:var(--muted);padding:24px">No hay figuritas repetidas todavía.</td>`;
+    tbody.appendChild(tr);
+    document.getElementById('whatsapp-rep').style.display = 'none';
+    return;
   }
+
+  const codes = entries.map(d => `${d.code} (×${d.cantidad_rep || 2})`).join(', ');
+  const msg = `⚽ *Álbum FIFA 2026 — Figuritas Repetidas*\n\n${codes}\n\n¿Alguien las necesita? 🔁`;
+  document.getElementById('wa-rep-msg').textContent = msg;
+  document.getElementById('whatsapp-rep').style.display = 'block';
 }
 
 // ============================================================
